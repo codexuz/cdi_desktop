@@ -28,6 +28,9 @@ const removeCookie = (name: string) => {
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Strict`
 }
 
+// Export getCookie
+export { getCookie }
+
 // Request interceptor to add access token
 api.interceptors.request.use((config) => {
   const token = getCookie('access_token')

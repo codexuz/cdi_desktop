@@ -2,10 +2,8 @@
   <div class="login-page">
     <div class="login-container">
       <div class="logo-section">
-        <div class="logo">
-          <span class="logo-text">IELTS</span>
-        </div>
-        <h1 class="platform-title">CDI Platform</h1>
+        <img src="/logo.png" alt="Logo" class="logo" />
+        <h1 class="platform-title">Mockmee Exam <br />Platform</h1>
         <p class="platform-subtitle">International English Language Testing System</p>
       </div>
 
@@ -84,7 +82,7 @@ const onSubmit = async () => {
 <style scoped>
 .login-page {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -117,7 +115,7 @@ const onSubmit = async () => {
   text-align: center;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.3),
-    0 8px 25px rgba(220, 38, 38, 0.2);
+    0 8px 25px rgba(37, 99, 235, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
   z-index: 1;
@@ -130,13 +128,11 @@ const onSubmit = async () => {
 .logo {
   width: 120px;
   height: 120px;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 20px;
-  box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
 }
 
 .logo-text {
@@ -151,7 +147,7 @@ const onSubmit = async () => {
   font-size: 32px;
   font-weight: bold;
   margin-bottom: 8px;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -188,8 +184,8 @@ const onSubmit = async () => {
 }
 
 .form-input:focus {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   background: white;
 }
 
@@ -203,12 +199,12 @@ const onSubmit = async () => {
   font-size: 18px;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   border: none;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -230,7 +226,7 @@ const onSubmit = async () => {
 
 .login-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 12px 35px rgba(37, 99, 235, 0.4);
 }
 
 .login-button:active {

@@ -21,7 +21,7 @@
         <p>{{ error }}</p>
       </div>
 
-      <div class="tests">
+      <div v-else class="tests">
         <div v-if="tests.length === 0" class="no-tests">
           <p>
             No tests available at the moment. Please check back later or contact your administrator.
@@ -29,6 +29,7 @@
         </div>
 
         <div
+          v-else
           v-for="test in tests"
           :key="test.id"
           class="one-test"
@@ -249,25 +250,14 @@ const formatDate = (dateString: string) => {
 // Function to start test
 const startTest = async (testId: string) => {
   try {
-    const response = await fetch('/api/tests/start', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    const response = await post('/student/start-test')
 
-    if (response.ok) {
-      const data = await response.json()
-      console.log('Test started successfully:', data)
-      // Redirect to the test page or update status
-      window.location.href = `/tests/listening/${testId}`
-    } else {
-      console.error('Failed to start test')
-      alert('Failed to start test. Please try again.')
-    }
+    console.log('Test started successfully:', response.data)
+    // Redirect to the test page or update status
+    window.location.href = `/tests/listening/${testId}`
   } catch (error) {
     console.error('Error starting test:', error)
-    alert('Error starting test. Please try again.')
+    alert('Failed to start test. Please try again.')
   }
 }
 
@@ -338,7 +328,7 @@ onUnmounted(() => {
 <style scoped>
 .wrap {
   min-height: 100vh;
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   font-family:
     'Poppins',
     -apple-system,
@@ -368,7 +358,7 @@ onUnmounted(() => {
 .logo {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #dc2626;
+  color: #2563eb;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -380,7 +370,7 @@ onUnmounted(() => {
 }
 
 .logout-btn {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, #258beb 0%, #2563eb 100%);
   color: white;
   border: none;
   padding: 0.5rem 1.5rem;
@@ -388,12 +378,12 @@ onUnmounted(() => {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
 .logout-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .container {
@@ -428,14 +418,14 @@ onUnmounted(() => {
 }
 
 .date span {
-  color: #dc2626;
+  color: #2563eb;
   font-weight: 700;
 }
 
 .date hr {
   border: none;
   height: 2px;
-  background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%);
+  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
   margin: 1rem 0;
 }
 
@@ -470,7 +460,7 @@ onUnmounted(() => {
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 0.5rem 0;
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -492,7 +482,7 @@ onUnmounted(() => {
 }
 
 .timing {
-  color: #dc2626;
+  color: #2563eb;
   font-weight: 700;
   margin-left: 0.25rem;
 }
@@ -509,7 +499,7 @@ onUnmounted(() => {
 }
 
 .start-test {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -518,7 +508,7 @@ onUnmounted(() => {
   font-size: 1.1rem;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -540,7 +530,7 @@ onUnmounted(() => {
 
 .start-test:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 12px 35px rgba(37, 99, 235, 0.4);
 }
 
 .start-test.completed-btn {
@@ -683,14 +673,14 @@ onUnmounted(() => {
 }
 
 .logout-confirm-btn {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, #258beb 0%, #2563eb 100%);
   color: white;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
 .logout-confirm-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .logout-cancel-btn {
