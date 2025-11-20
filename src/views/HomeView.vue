@@ -20,12 +20,6 @@
       <div v-else-if="error" class="error">
         <p>{{ error }}</p>
       </div>
-      <div v-else>
-        <p>
-          Today: <span>{{ currentDate }}</span>
-        </p>
-        <hr />
-      </div>
 
       <div class="tests">
         <div v-if="tests.length === 0" class="no-tests">
