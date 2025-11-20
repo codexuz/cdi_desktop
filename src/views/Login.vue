@@ -1,39 +1,43 @@
 <template>
-  <div class="login-container">
-    <div class="logo-section">
-      <div class="logo">
-        <span class="logo-text">IELTS</span>
+  <div class="login-page">
+    <div class="login-container">
+      <div class="logo-section">
+        <div class="logo">
+          <span class="logo-text">IELTS</span>
+        </div>
+        <h1 class="platform-title">CDI Platform</h1>
+        <p class="platform-subtitle">International English Language Testing System</p>
       </div>
-      <h1 class="platform-title">CDI Platform</h1>
-      <p class="platform-subtitle">International English Language Testing System</p>
+
+      <form id="loginForm" @submit.prevent="onSubmit">
+        <div class="error-message" v-if="errorMessage">
+          {{ errorMessage }}
+        </div>
+
+        <div class="form-group">
+          <label for="candidateId" class="form-label">Candidate ID</label>
+          <input
+            type="text"
+            id="candidateId"
+            name="candidateId"
+            class="form-input"
+            placeholder="Enter your Candidate ID"
+            required
+            autocomplete="off"
+            v-model="candidateId"
+          />
+        </div>
+
+        <button type="submit" class="login-button" :disabled="isLoading">
+          <span v-if="isLoading" class="loading"></span>
+          <span class="button-text">{{ isLoading ? 'Logging in...' : 'Enter System' }}</span>
+        </button>
+      </form>
+
+      <div class="footer-text">
+        Please ensure you have your Candidate ID ready before proceeding.
+      </div>
     </div>
-
-    <form id="loginForm" @submit.prevent="onSubmit">
-      <div class="error-message" v-if="errorMessage">
-        {{ errorMessage }}
-      </div>
-
-      <div class="form-group">
-        <label for="candidateId" class="form-label">Candidate ID</label>
-        <input
-          type="text"
-          id="candidateId"
-          name="candidateId"
-          class="form-input"
-          placeholder="Enter your Candidate ID"
-          required
-          autocomplete="off"
-          v-model="candidateId"
-        />
-      </div>
-
-      <button type="submit" class="login-button" :disabled="isLoading">
-        <span v-if="isLoading" class="loading"></span>
-        <span class="button-text">{{ isLoading ? 'Logging in...' : 'Enter System' }}</span>
-      </button>
-    </form>
-
-    <div class="footer-text">Please ensure you have your Candidate ID ready before proceeding.</div>
   </div>
 </template>
 
@@ -58,7 +62,7 @@ const onSubmit = async () => {
 
   try {
     const response = await post('/auth/student-login', {
-      candidateId: candidateId.value.trim(),
+      candidate_id: candidateId.value.trim(),
     })
 
     // Assuming the response has access_token
@@ -78,13 +82,7 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
+.login-page {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
   min-height: 100vh;
@@ -96,7 +94,7 @@ body {
 }
 
 /* Background pattern */
-body::before {
+.login-page::before {
   content: '';
   position: absolute;
   top: 0;
