@@ -1,10 +1,10 @@
 <template>
   <div class="completion">
-    <div class="question-header">
-      <h3>{{ title }}</h3>
-      <p v-if="condition" class="condition" v-html="condition"></p>
+    <div class="question-header font-bold text-gray-800 dark:text-gray-200 mb-4">
+      <h3 class="text-3xl">{{ title }}</h3>
+      <p v-if="condition" class="condition text-gray-600 dark:text-gray-300" v-html="condition"></p>
     </div>
-    <div class="content" v-html="processedContent"></div>
+    <div class="content text-[#374151] dark:text-gray-400" v-html="processedContent"></div>
   </div>
 </template>
 
@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Record<string, string>): void
+  (e: 'register-refs', refs: Record<number, HTMLElement>): void
 }>()
 
 const processedContent = computed(() => {
@@ -36,7 +37,7 @@ const processedContent = computed(() => {
   content = content.replace(/@@/g, () => {
     const currentNum = questionNum++
     const value = props.modelValue[currentNum] || ''
-    return `<input type="text" class="completion-input" data-question="${currentNum}" value="${value}" placeholder="..."/>`
+    return ` <input type="text" class="text-center text-slate-900 dark:text-white border-2 border-gray-300 dark:border-slate-600 rounded-sm focus:outline-none focus:border-2 focus:border-blue-500" data-question="${currentNum}" value="${value}" placeholder="${currentNum}"/>`
   })
 
   return content
@@ -54,6 +55,15 @@ const handleInputChange = (event: Event) => {
 
 // Add event listener after mount
 onMounted(() => {
+  const refs: Record<number, HTMLElement> = {}
+  document.querySelectorAll('.question-wrapper').forEach((wrapper) => {
+    const questionNum = wrapper.getAttribute('data-question')
+    if (questionNum) {
+      refs[parseInt(questionNum)] = wrapper as HTMLElement
+    }
+  })
+  emit('register-refs', refs)
+
   document.querySelectorAll('.completion-input').forEach((input) => {
     input.addEventListener('input', handleInputChange)
   })
@@ -66,13 +76,11 @@ onMounted(() => {
 }
 
 .question-header h3 {
-  color: #2563eb;
   font-size: 1.3rem;
   margin-bottom: 12px;
 }
 
 .condition {
-  color: #374151;
   margin-bottom: 16px;
   font-style: italic;
 }
@@ -81,36 +89,19 @@ onMounted(() => {
   line-height: 1.8;
 }
 
-.content :deep(.completion-input) {
-  padding: 6px 12px;
-  border: none;
-  border-bottom: 2px solid #2563eb;
-  background: transparent;
-  font-size: 1rem;
-  min-width: 120px;
-  transition: all 0.2s;
+.content :deep(.question-wrapper) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.content :deep(.completion-input):focus {
-  outline: none;
-  border-bottom-color: #1d4ed8;
-  background: #eff6ff;
-}
-
-.content :deep(h3) {
-  color: #1e293b;
-  font-size: 1.2rem;
-  margin: 20px 0 12px;
-}
 
 .content :deep(p) {
-  color: #374151;
   margin-bottom: 12px;
 }
 
 .content :deep(ul) {
   list-style-position: inside;
-  color: #374151;
 }
 
 .content :deep(li) {

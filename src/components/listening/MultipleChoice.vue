@@ -1,18 +1,37 @@
 <template>
-  <div class="multiple-choice">
-    <div class="question-header">
-      <h3>{{ title }}</h3>
-      <p v-if="condition" class="condition" v-html="condition"></p>
+  <div class="mb-8">
+    <div class="mb-4">
+      <h3 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">{{ title }}</h3>
+      <p
+        v-if="condition"
+        class="text-gray-700 dark:text-gray-300 text-sm mb-2"
+        v-html="condition"
+      ></p>
     </div>
-    <div v-for="(question, index) in questions" :key="question.id" class="question-item">
-      <div class="question-number">Question {{ startNumber + index }}</div>
-      <div class="question-text">{{ question.question }}</div>
-      <div class="options">
+    <div
+      v-for="(question, index) in questions"
+      :key="question.id"
+      class="mb-6"
+      :ref="(el) => setQuestionRef(startNumber + index, el)"
+    >
+      <div class="flex items-start gap-2 mb-2">
+        <span
+          class="inline-block min-w-[30px] h-6 text-slate-800 dark:text-slate-400 font-bold text-center leading-5 text-sm"
+        >
+          {{ startNumber + index }}
+        </span>
+        <span class="text-gray-900 dark:text-gray-100 leading-6">{{ question.question }}</span>
+      </div>
+      <div class="flex flex-col gap-1 ml-8">
         <label
           v-for="option in question.options"
           :key="option.id"
-          class="option-label"
-          :class="{ selected: answers[question.id] === option.value }"
+          class="flex items-center gap-2 py-2 px-3 cursor-pointer transition-colors"
+          :class="
+            answers[question.id] === option.value
+              ? 'bg-blue-100 dark:bg-blue-900/30'
+              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+          "
         >
           <input
             type="radio"
@@ -20,9 +39,9 @@
             :value="option.value"
             v-model="answers[question.id]"
             @change="updateAnswer(question.id, option.value)"
+            class="w-4 h-4 cursor-pointer"
           />
-          <span class="option-value">{{ option.value }}</span>
-          <span class="option-text">{{ option.label }}</span>
+          <span class="text-gray-900 dark:text-gray-100">{{ option.label }}</span>
         </label>
       </div>
     </div>
@@ -30,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 
 interface Option {
   id: string
@@ -59,9 +78,17 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Record<string, string>): void
+  (e: 'register-refs', refs: Record<number, HTMLElement>): void
 }>()
 
 const answers = ref<Record<string, string>>({ ...props.modelValue })
+const questionElements = ref<Record<number, HTMLElement>>({})
+
+const setQuestionRef = (questionNum: number, el: any) => {
+  if (el) {
+    questionElements.value[questionNum] = el as HTMLElement
+  }
+}
 
 watch(
   () => props.modelValue,
@@ -74,83 +101,8 @@ const updateAnswer = (questionId: string, value: string) => {
   answers.value[questionId] = value
   emit('update:modelValue', { ...answers.value })
 }
+
+onMounted(() => {
+  emit('register-refs', questionElements.value)
+})
 </script>
-
-<style scoped>
-.multiple-choice {
-  margin-bottom: 32px;
-}
-
-.question-header h3 {
-  color: #2563eb;
-  font-size: 1.3rem;
-  margin-bottom: 12px;
-}
-
-.condition {
-  color: #374151;
-  margin-bottom: 16px;
-  font-style: italic;
-}
-
-.question-item {
-  margin-bottom: 24px;
-  padding: 16px;
-  background: #f3f6fd;
-  border-radius: 12px;
-}
-
-.question-number {
-  font-weight: 600;
-  color: #2563eb;
-  margin-bottom: 8px;
-}
-
-.question-text {
-  color: #1e293b;
-  margin-bottom: 12px;
-  font-size: 1.05rem;
-}
-
-.options {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.option-label {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #fff;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.option-label:hover {
-  border-color: #2563eb;
-  background: #eff6ff;
-}
-
-.option-label.selected {
-  border-color: #2563eb;
-  background: #dbeafe;
-}
-
-.option-label input[type='radio'] {
-  cursor: pointer;
-}
-
-.option-value {
-  font-weight: 600;
-  color: #2563eb;
-  min-width: 24px;
-}
-
-.option-text {
-  color: #374151;
-}
-</style>

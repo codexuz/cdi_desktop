@@ -24,6 +24,10 @@ const toggleTheme = () => {
 
 defineProps({
   title: String,
+  timer: {
+    type: Boolean,
+    default: true,
+  }
 })
 
 const open = ref(false)
@@ -34,7 +38,7 @@ const open = ref(false)
   <header class="sticky top-0 z-50 py-2 w-full bg-white/30 dark:bg-black dark:border pb-3 backdrop-blur-md shadow-sm">
     <div class="mx-4 flex h-full items-center justify-between px-4 gap-3">
      <h1 class="scroll-m-20 text-xl font-bold tracking-tight">{{ title }}</h1>
-      <div>
+      <div v-if="timer">
         <Button variant="ghost" class="text-xl">60:00</Button>
       </div>
      

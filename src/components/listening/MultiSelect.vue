@@ -48,6 +48,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Record<string, string[]>): void
+  (e: 'register-refs', refs: Record<number, HTMLElement>): void
 }>()
 
 const processedContent = computed(() => {
@@ -57,16 +58,19 @@ const processedContent = computed(() => {
   // Replace @@ with multi-select checkboxes
   content = content.replace(/@@/g, () => {
     const currentNum = questionNum++
-    return `<div class="multi-select-group" data-question="${currentNum}">
-      ${props.options
-        .map(
-          (opt) =>
-            `<label class="checkbox-label">
-            <input type="checkbox" value="${opt.value}" class="multi-select-checkbox" data-question="${currentNum}" />
-            <span>${opt.value}</span>
-          </label>`,
-        )
-        .join('')}
+    return `<div class="question-wrapper" data-question="${currentNum}">
+      <span class="question-number">${currentNum}</span>
+      <div class="multi-select-group" data-question="${currentNum}">
+        ${props.options
+          .map(
+            (opt) =>
+              `<label class="checkbox-label">
+              <input type="checkbox" value="${opt.value}" class="multi-select-checkbox" data-question="${currentNum}" />
+              <span>${opt.value}</span>
+            </label>`,
+          )
+          .join('')}
+      </div>
     </div>`
   })
 
@@ -99,6 +103,15 @@ const handleCheckboxChange = (event: Event) => {
 
 // Add event listener after mount
 onMounted(() => {
+  const refs: Record<number, HTMLElement> = {}
+  document.querySelectorAll('.question-wrapper').forEach((wrapper) => {
+    const questionNum = wrapper.getAttribute('data-question')
+    if (questionNum) {
+      refs[parseInt(questionNum)] = wrapper as HTMLElement
+    }
+  })
+  emit('register-refs', refs)
+
   document.querySelectorAll('.multi-select-checkbox').forEach((checkbox) => {
     checkbox.addEventListener('change', handleCheckboxChange)
   })
@@ -158,11 +171,24 @@ onMounted(() => {
   color: #374151;
 }
 
+.content :deep(.question-wrapper) {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.content :deep(.question-number) {
+  font-weight: 600;
+  color: #2563eb;
+  font-size: 0.9rem;
+  padding-top: 8px;
+}
+
 .content :deep(.multi-select-group) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 8px 0;
 }
 
 .content :deep(.checkbox-label) {

@@ -25,6 +25,11 @@ const router = createRouter({
       name: 'listening',
       component: () => import('../views/listening/index.vue'),
     },
+    {
+      path: '/writing/:id',
+      name: 'writing',
+      component: () => import('../views/writing/index.vue'),
+    },
   ],
 })
 

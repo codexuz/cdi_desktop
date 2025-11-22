@@ -1,47 +1,7 @@
 <template>
-  <ExamLayout title="Listening">
+  <ExamLayout title="Listening" :timer="false">
     <div class="min-w-0 flex-1 overflow-y-auto">
       <div class="h-full flex flex-col">
-        <!-- Header Card -->
-        <Card
-          class="m-4 rounded-md shadow-none border px-4 py-3 bg-gray-100 dark:bg-[#1f2937] dark:border-[#1f2937]"
-        >
-          <CardContent>
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-lg font-semibold">Part {{ activePart }}</h2>
-                <p>Listen to the audio and answer questions {{ getPartQuestionRange() }}.</p>
-              </div>
-              <div class="flex items-center gap-4">
-                <!-- Audio Player Controls -->
-                <div class="flex items-center gap-2">
-                  <Button size="sm" variant="outline" @click="togglePlay">
-                    <component :is="isPlaying ? Pause : Play" class="h-4 w-4" />
-                  </Button>
-                  <span class="text-sm font-mono"
-                    >{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span
-                  >
-                  <Button size="sm" variant="outline" @click="toggleMute">
-                    <component :is="isMuted ? VolumeX : Volume2" class="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <!-- Audio Progress Bar -->
-            <div class="mt-3">
-              <div
-                class="relative h-2 bg-gray-300 dark:bg-gray-700 rounded-full cursor-pointer"
-                @click="seekAudio"
-              >
-                <div
-                  class="absolute h-full bg-blue-500 rounded-full"
-                  :style="{ width: progressPercent + '%' }"
-                ></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <!-- Main Content -->
         <div class="flex-1 overflow-y-auto">
           <ScrollArea class="mx-auto w-full h-full max-w-6xl px-2 py-4 md:px-4 md:py-6">
@@ -51,71 +11,103 @@
             <div v-else-if="error" class="text-center py-12">
               <p class="text-lg text-red-500">{{ error }}</p>
             </div>
-            <div v-else-if="listeningData">
-              <!-- Render questions based on active part -->
-              <div v-for="part in listeningData.parts" :key="part.id">
-                <div v-if="part.part === `PART_${activePart}`">
-                  <div
-                    v-for="(section, index) in part.question.content"
-                    :key="section.id"
-                    class="mb-8"
+            <ContextMenu v-else-if="listeningData">
+              <ContextMenuTrigger>
+                <div>
+                  <!-- Render questions based on active part -->
+
+                  <!-- Header Card -->
+                  <Card
+                    class="mb-6 rounded-md shadow-none border px-4 py-3 bg-gray-100 dark:bg-[#1f2937] dark:border-[#1f2937]"
                   >
-                    <!-- Multiple Choice -->
-                    <MultipleChoice
-                      v-if="section.type === 'multiple-choice'"
-                      :title="section.title"
-                      :condition="section.condition"
-                      :questions="section.questions"
-                      :start-number="getStartNumber(part.part, index)"
-                      v-model="answers[part.id][section.id]"
-                      @register-refs="registerQuestionRefs"
-                    />
-                    <!-- Selection -->
-                    <Selection
-                      v-else-if="section.type === 'selection'"
-                      :title="section.title"
-                      :condition="section.condition"
-                      :content="section.content"
-                      :options="section.options"
-                      :show-options="section.showOptions"
-                      :options-title="section.optionsTitle"
-                      :start-number="getStartNumber(part.part, index)"
-                      v-model="answers[part.id][section.id]"
-                      @register-refs="registerQuestionRefs"
-                    />
-                    <!-- Completion -->
-                    <Completion
-                      v-else-if="section.type === 'completion'"
-                      :title="section.title"
-                      :condition="section.condition"
-                      :content="section.content"
-                      :start-number="getStartNumber(part.part, index)"
-                      v-model="answers[part.id][section.id]"
-                      @register-refs="registerQuestionRefs"
-                    />
-                    <!-- Multi Select -->
-                    <MultiSelect
-                      v-else-if="section.type === 'multi-select'"
-                      :title="section.title"
-                      :condition="section.condition"
-                      :content="section.content"
-                      :options="section.options"
-                      :show-options="section.showOptions"
-                      :options-title="section.optionsTitle"
-                      :start-number="getStartNumber(part.part, index)"
-                      v-model="answers[part.id][section.id]"
-                      @register-refs="registerQuestionRefs"
-                    />
+                    <CardContent>
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <h2 class="text-lg font-semibold">Part {{ activePart }}</h2>
+                          <p>Listen and answer questions {{ getPartQuestionRange() }}.</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <div v-for="part in listeningData.parts" :key="part.id">
+                    <div v-if="part.part === `PART_${activePart}`">
+                      <div
+                        v-for="(section, index) in part.question.content"
+                        :key="section.id"
+                        class="mb-8"
+                      >
+                        <!-- Multiple Choice -->
+                        <MultipleChoice
+                          v-if="section.type === 'multiple-choice'"
+                          :title="section.title"
+                          :condition="section.condition"
+                          :questions="section.questions"
+                          :start-number="getStartNumber(part.part, index)"
+                          v-model="answers[part.id][section.id]"
+                          @register-refs="registerQuestionRefs"
+                        />
+                        <!-- Selection -->
+                        <Selection
+                          v-else-if="section.type === 'selection'"
+                          :title="section.title"
+                          :condition="section.condition"
+                          :content="section.content"
+                          :options="section.options"
+                          :show-options="section.showOptions"
+                          :options-title="section.optionsTitle"
+                          :start-number="getStartNumber(part.part, index)"
+                          v-model="answers[part.id][section.id]"
+                          @register-refs="registerQuestionRefs"
+                        />
+                        <!-- Completion -->
+                        <Completion
+                          v-else-if="section.type === 'completion'"
+                          :title="section.title"
+                          :condition="section.condition"
+                          :content="section.content"
+                          :start-number="getStartNumber(part.part, index)"
+                          v-model="answers[part.id][section.id]"
+                          @register-refs="registerQuestionRefs"
+                        />
+                        <!-- Multi Select -->
+                        <MultiSelect
+                          v-else-if="section.type === 'multi-select'"
+                          :title="section.title"
+                          :condition="section.condition"
+                          :content="section.content"
+                          :options="section.options"
+                          :show-options="section.showOptions"
+                          :options-title="section.optionsTitle"
+                          :start-number="getStartNumber(part.part, index)"
+                          v-model="answers[part.id][section.id]"
+                          @register-refs="registerQuestionRefs"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem @click="highlightText">
+                  <Highlighter class="mr-2 h-4 w-4" />
+                  Highlight
+                </ContextMenuItem>
+                <ContextMenuItem @click="copyText">
+                  <Copy class="mr-2 h-4 w-4" />
+                  Copy
+                </ContextMenuItem>
+                <ContextMenuItem @click="clearHighlightSelection">
+                  <Trash2Icon class="mr-2 h-4 w-4" />
+                  Clear Highlights
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           </ScrollArea>
         </div>
 
         <!-- Footer Navigation -->
         <div
-          class="rounded-none border-t dark:border-t-gray-700 relative flex h-16 items-center justify-between space-x-4 overflow-x-auto"
+          class="rounded-none border-t dark:border-t-gray-700 relative flex h-16 items-center justify-around mx-8 space-x-4 overflow-x-auto"
         >
           <!-- Part 1 -->
           <div
@@ -278,24 +270,93 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { get, post } from '@/utils/api'
 import ExamLayout from '@/layouts/ExamLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Play, Pause, Volume2, VolumeX } from 'lucide-vue-next'
+import { Play, Pause, Volume2, VolumeX, Copy, Highlighter, Trash2Icon } from 'lucide-vue-next'
+import { useTextSelection } from '@vueuse/core'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import MultipleChoice from '@/components/listening/MultipleChoice.vue'
 import Selection from '@/components/listening/Selection.vue'
 import Completion from '@/components/listening/Completion.vue'
 import MultiSelect from '@/components/listening/MultiSelect.vue'
+
+const { text } = useTextSelection()
+const selection = ref(null)
+
+function highlightSelectedText() {
+  selection.value = window.getSelection()
+  if (!selection.value || !selection.value.rangeCount) return
+
+  const range = selection.value.getRangeAt(0)
+  if (range.toString().trim() === '') return
+
+  // Wrap in <mark>
+  const mark = document.createElement('mark')
+  mark.classList.add('highlight')
+  try {
+    range.surroundContents(mark)
+  } catch (err) {
+    console.warn('Highlight failed (probably multi-node selection):', err)
+  }
+
+  // Clear native selection (optional)
+  selection.value.removeAllRanges()
+}
+
+const clearHighlightSelection = () => {
+  // Remove all highlight marks
+  const highlights = document.querySelectorAll('mark.highlight')
+  highlights.forEach((mark) => {
+    const parent = mark.parentNode
+    while (mark.firstChild) {
+      parent.insertBefore(mark.firstChild, mark)
+    }
+    parent.removeChild(mark)
+  })
+
+  // Clear any active selection
+  if (window.getSelection) {
+    window.getSelection().removeAllRanges()
+  } else if (document.selection) {
+    document.selection.empty()
+  }
+}
+
+const copyText = async () => {
+  if (text.value) {
+    try {
+      await navigator.clipboard.writeText(text.value)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
+}
+
+const highlightText = () => {
+  if (text.value) {
+    highlightSelectedText()
+  }
+}
+
+const route = useRoute()
+const router = useRouter()
 
 const isLoading = ref(true)
 const error = ref('')
 const listeningData = ref<any>(null)
 const answers = ref<Record<string, any>>({})
 
-const activePart = ref(1)
-const activeQuestion = ref(0)
+const activePart = ref(parseInt(route.query.part as string) || 1)
+const activeQuestion = ref(parseInt(route.query.question as string) || 0)
 const questionRefs = ref<Record<number, HTMLElement>>({})
 
 // Audio player state
@@ -326,11 +387,58 @@ onMounted(async () => {
         }
       }
     }
+
+    // Scroll to active question after refs are registered
+    setTimeout(() => {
+      const absoluteQuestionNum = calculateAbsoluteQuestionNumber(
+        activePart.value,
+        activeQuestion.value,
+      )
+      const element = questionRefs.value[absoluteQuestionNum]
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 100)
   } catch (err: any) {
     error.value = err?.response?.data?.message || 'Failed to load listening test.'
   } finally {
     isLoading.value = false
   }
+})
+
+// Watch route query parameters
+watch(
+  () => route.query,
+  (query) => {
+    if (query.part) {
+      activePart.value = parseInt(query.part as string)
+    }
+    if (query.question !== undefined) {
+      activeQuestion.value = parseInt(query.question as string)
+
+      // Scroll to question
+      setTimeout(() => {
+        const absoluteQuestionNum = calculateAbsoluteQuestionNumber(
+          activePart.value,
+          activeQuestion.value,
+        )
+        const element = questionRefs.value[absoluteQuestionNum]
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 50)
+    }
+  },
+)
+
+// Watch active part and question to update URL
+watch([activePart, activeQuestion], ([newPart, newQuestion]) => {
+  router.push({
+    query: {
+      part: newPart.toString(),
+      question: newQuestion.toString(),
+    },
+  })
 })
 
 // Watch active part and load audio
@@ -451,5 +559,9 @@ const submitAnswers = async () => {
 </script>
 
 <style scoped>
-/* Add any custom styles here */
+/* Highlight styles */
+:deep(mark.highlight) {
+  background-color: yellow;
+  color: black;
+}
 </style>
