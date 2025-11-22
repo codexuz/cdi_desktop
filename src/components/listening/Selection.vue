@@ -24,7 +24,7 @@
                 v-html="question.text"
               ></span>
               <div
-                class="min-w-30 h-10 border-2 rounded-sm flex items-center justify-center transition-all"
+                class="min-w-20 h-10 border rounded flex items-center justify-center transition-all"
                 :class="
                   dragOverQuestion === index
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 border-dashed'
@@ -60,7 +60,7 @@
             draggable="true"
             @dragstart="onDragStart($event, option.value)"
             @dragend="onDragEnd"
-            class="border rounded-sm w-auto px-3 py-2 bg-white dark:bg-gray-700 transition-all text-gray-900 dark:text-gray-100"
+            class="border rounded px-3 py-2 bg-white dark:bg-gray-700 transition-all text-gray-900 dark:text-gray-100"
             :class="
               isOptionUsed(option.value)
                 ? 'border-gray-300 dark:border-gray-600 opacity-40 cursor-not-allowed'
@@ -69,7 +69,6 @@
                   : 'border-gray-300 dark:border-gray-600 cursor-move hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'
             "
           >
-            {{ option.value }} -
             {{ option.label }}
           </div>
         </div>

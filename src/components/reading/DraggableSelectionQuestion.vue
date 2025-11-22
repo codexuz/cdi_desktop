@@ -68,6 +68,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 interface DraggableOption {
   id: string;
   value: string;

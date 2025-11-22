@@ -309,8 +309,6 @@ onMounted(async () => {
 
   // Fetch assignment data
   try {
-     const listening = await get('/student/listening')
-     console.log('Fetched listening data:', listening.data)
     const response = await get('/student/assignment')
     testData.value = response.data
     candidateId.value = response.data.candidate_id || response.data.student.name // Assuming candidate_id or use name
