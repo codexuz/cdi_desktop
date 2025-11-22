@@ -16,20 +16,27 @@
     <div
       v-for="(questionItem, questionIndex) in question.questions"
       :key="questionItem.id"
-      class="mb-6"
+      :data-question-number="startingQuestionNumber + questionIndex"
+      class="mb-6 p-3 rounded transition-colors"
+      :class="
+        activeQuestionNumber === startingQuestionNumber + questionIndex
+          ? 'bg-gray-100 dark:bg-blue-900/20 '
+          : ''
+      "
+      @click="emit('question-click', startingQuestionNumber + questionIndex)"
     >
       <!-- Question Text -->
-      <div class="flex items-start gap-2 mb-2">
+      <div class="flex items-start gap-2 mb-2 cursor-pointer">
         <span
           class="inline-block min-w-[30px] h-6 text-slate-800 dark:text-slate-400 font-bold text-center leading-5 text-sm"
         >
-          {{ questionIndex + 1 }}
+          {{ startingQuestionNumber + questionIndex }}
         </span>
         <span class="text-gray-900 dark:text-gray-100 leading-6">{{ questionItem.question }}</span>
       </div>
 
       <!-- Options -->
-      <div class="flex flex-col gap-1 ml-8">
+      <div class="flex flex-col gap-1 ml-8" @click.stop>
         <label
           v-for="option in questionItem.options"
           :key="option.id"
@@ -81,15 +88,20 @@ interface Props {
   question: MultipleChoiceQuestion
   modelValue?: string[]
   showAnswers?: boolean
+  startingQuestionNumber?: number
+  activeQuestionNumber?: number
 }
 
 interface Emits {
   (e: 'update:modelValue', value: string[]): void
+  (e: 'question-click', questionNumber: number): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: () => [],
   showAnswers: false,
+  startingQuestionNumber: 1,
+  activeQuestionNumber: 1,
 })
 
 const emit = defineEmits<Emits>()

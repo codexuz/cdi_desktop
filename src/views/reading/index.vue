@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { get } from '@/utils/api'
+import { ref, computed, onMounted, nextTick, watch, onUnmounted } from 'vue'
+import { get, post } from '@/utils/api'
 // Import other UI components
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,23 +28,68 @@ import {
 import SelectionQuestion from '@/components/reading/SelectionQuestion.vue'
 import CompletionQuestion from '@/components/reading/CompletionQuestion.vue'
 import MultipleChoiceQuestion from '@/components/reading/MultipleChoiceQuestion.vue'
+import { useExamAnswersStore } from '@/stores/examAnswers'
+import { useTimerStore } from '@/stores/timer'
+import { useRouter } from 'vue-router'
 
 // Reading test data
 const isLoading = ref(true)
 const error = ref('')
 const readingData = ref(null)
+const examAnswersStore = useExamAnswersStore()
+const timerStore = useTimerStore()
+const router = useRouter()
+
+// Reactive state for active part and question
+const activePart = ref(1)
+const activeQuestion = ref(0)
+const activeGlobalQuestion = ref(1) // Track the global question number (1-40)
+
+// Answers storage
+const answers = ref({})
 
 // Fetch reading test data
 onMounted(async () => {
   try {
     const response = await get('/student/reading')
     readingData.value = response.data
+
+    // Load saved answers from store
+    const savedAnswers = examAnswersStore.getReadingAnswers()
+    answers.value = Object.keys(savedAnswers).length > 0 ? savedAnswers : {}
+
+    // Start timer
+    timerStore.start()
+
+    // Listen for timer finished event
+    window.addEventListener('timer-finished', handleTimerFinished)
   } catch (err) {
     error.value = err?.response?.data?.message || 'Failed to load reading test.'
   } finally {
     isLoading.value = false
   }
 })
+
+// Handle timer finished
+const handleTimerFinished = async () => {
+  alert('Time is up! Your answers will be submitted automatically.')
+  await submitAnswers()
+  router.push('/') // Redirect to home or results page
+}
+
+// Cleanup on unmount
+onUnmounted(() => {
+  window.removeEventListener('timer-finished', handleTimerFinished)
+})
+
+// Watch answers and save to store
+watch(
+  answers,
+  (newAnswers) => {
+    examAnswersStore.setReadingAnswers(newAnswers)
+  },
+  { deep: true },
+)
 
 // Watch for new text selection
 const selection = ref(null)
@@ -88,18 +133,95 @@ const clearHighlightSelection = () => {
   }
 }
 
-// Reactive state for active part and question
-const activePart = ref(1)
-const activeQuestion = ref(0)
+// Check if a specific question number has been answered
+const isQuestionAnswered = (globalQuestionNumber) => {
+  // Find which part and section this question belongs to
+  let currentQuestionNum = 1
 
-// Answers storage
-const answers = ref({})
+  if (!readingData.value?.parts) return false
+
+  // Sort parts to ensure correct order (PART_1, PART_2, PART_3)
+  const sortedParts = [...readingData.value.parts].sort((a, b) => {
+    const aNum = parseInt(a.part.split('_')[1])
+    const bNum = parseInt(b.part.split('_')[1])
+    return aNum - bNum
+  })
+
+  for (const part of sortedParts) {
+    if (!part.question?.content) continue
+
+    for (const section of part.question.content) {
+      const sectionQuestionCount = getSectionQuestionCount(section)
+
+      // Check if this global question number falls within this section
+      if (
+        globalQuestionNumber >= currentQuestionNum &&
+        globalQuestionNumber < currentQuestionNum + sectionQuestionCount
+      ) {
+        const localIndex = globalQuestionNumber - currentQuestionNum
+        const sectionAnswers = answers.value[section.id]
+
+        if (!sectionAnswers || !Array.isArray(sectionAnswers)) return false
+
+        const answer = sectionAnswers[localIndex]
+        // Check if answer exists and is not empty
+        return (
+          answer !== undefined &&
+          answer !== null &&
+          answer !== '' &&
+          answer.toString().trim() !== ''
+        )
+      }
+
+      currentQuestionNum += sectionQuestionCount
+    }
+  }
+
+  return false
+}
 
 // Current part data
 const currentPart = computed(() => {
   if (!readingData.value?.parts) return null
   return readingData.value.parts.find((p) => p.part === `PART_${activePart.value}`)
 })
+
+// Get starting question number for current part
+const getStartingQuestionNumber = computed(() => {
+  let start = 1
+  for (let i = 1; i < activePart.value; i++) {
+    start += getPartQuestionCount(i)
+  }
+  return start
+})
+
+// Get the number of questions in a section (counting @@ markers or questions array)
+const getSectionQuestionCount = (section) => {
+  if (section.type === 'selection' || section.type === 'completion') {
+    // Count @@ markers in content
+    const matches = section.content.match(/@@/g)
+    return matches ? matches.length : 0
+  } else if (section.type === 'multiple-choice') {
+    // Count questions array
+    return section.questions ? section.questions.length : 0
+  }
+  return 0
+}
+
+// Get starting question number for a specific section within the current part
+const getSectionStartingQuestionNumber = (sectionIndex) => {
+  let start = getStartingQuestionNumber.value
+
+  // Add questions from previous sections in the current part
+  if (currentPart.value?.question?.content) {
+    for (let i = 0; i < sectionIndex; i++) {
+      const section = currentPart.value.question.content[i]
+      start += getSectionQuestionCount(section)
+    }
+  }
+
+  return start
+}
 
 // Get question count for a part
 const getPartQuestionCount = (partNum) => {
@@ -121,31 +243,44 @@ const getQuestionRange = (partNum) => {
 const setActiveQuestion = (part, questionIndex) => {
   activePart.value = part
   activeQuestion.value = questionIndex
+  activeGlobalQuestion.value = getGlobalQuestionNumber(part, questionIndex)
+
+  // Scroll to the question element
+  nextTick(() => {
+    const questionElement = document.querySelector(
+      `[data-question-number="${activeGlobalQuestion.value}"]`,
+    )
+    if (questionElement) {
+      questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
 }
 
 // Function to get the global question number (1-40)
 const getGlobalQuestionNumber = (part, questionIndex) => {
-  switch (part) {
-    case 1:
-      return questionIndex + 1
-    case 2:
-      return questionIndex + 14
-    case 3:
-      return questionIndex + 27
-    default:
-      return questionIndex + 1
+  let start = 1
+  for (let i = 1; i < part; i++) {
+    start += getPartQuestionCount(i)
   }
+  return start + questionIndex
 }
 
 // Function to get part and local index from global question number
 const getPartAndIndex = (globalQuestionNumber) => {
-  if (globalQuestionNumber <= 13) {
-    return { part: 1, index: globalQuestionNumber - 1 }
-  } else if (globalQuestionNumber <= 26) {
-    return { part: 2, index: globalQuestionNumber - 14 }
-  } else {
-    return { part: 3, index: globalQuestionNumber - 27 }
+  let currentNum = 1
+  let part = 1
+
+  while (part <= 3) {
+    const partQuestionCount = getPartQuestionCount(part)
+    if (globalQuestionNumber < currentNum + partQuestionCount) {
+      return { part, index: globalQuestionNumber - currentNum }
+    }
+    currentNum += partQuestionCount
+    part++
   }
+
+  // Default fallback
+  return { part: 1, index: 0 }
 }
 
 // Function to set active question by global number
@@ -153,6 +288,17 @@ const setActiveQuestionByGlobalNumber = (globalQuestionNumber) => {
   const { part, index } = getPartAndIndex(globalQuestionNumber)
   activePart.value = part
   activeQuestion.value = index
+  activeGlobalQuestion.value = globalQuestionNumber
+
+  // Scroll to the question element
+  nextTick(() => {
+    const questionElement = document.querySelector(
+      `[data-question-number="${globalQuestionNumber}"]`,
+    )
+    if (questionElement) {
+      questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
 }
 
 // Text selection actions
@@ -245,28 +391,36 @@ const highlightText = () => {
                       <SelectionQuestion
                         v-if="section.type === 'selection'"
                         :question="section"
+                        :starting-question-number="getSectionStartingQuestionNumber(index)"
+                        :active-question-number="activeGlobalQuestion"
                         v-model="answers[section.id]"
+                        @question-click="setActiveQuestionByGlobalNumber"
                       />
 
                       <!-- Completion Questions -->
                       <CompletionQuestion
                         v-if="section.type === 'completion'"
                         :question="section"
+                        :starting-question-number="getSectionStartingQuestionNumber(index)"
+                        :active-question-number="activeGlobalQuestion"
                         v-model="answers[section.id]"
+                        @question-click="setActiveQuestionByGlobalNumber"
                       />
 
                       <!-- Multiple Choice Questions -->
                       <MultipleChoiceQuestion
                         v-if="section.type === 'multiple-choice'"
                         :question="section"
+                        :starting-question-number="getSectionStartingQuestionNumber(index)"
+                        :active-question-number="activeGlobalQuestion"
                         v-model="answers[section.id]"
+                        @question-click="setActiveQuestionByGlobalNumber"
                       />
                     </div>
                   </div>
                   <div v-else class="text-center py-12">
                     <p class="text-gray-500">No questions available</p>
                   </div>
-                  
                 </ScrollArea>
               </ContextMenuTrigger>
               <ContextMenuContent>
@@ -289,28 +443,37 @@ const highlightText = () => {
 
         <!----Footer--->
         <div
-          class="rounded-none border-t dark:border-t-gray-700 relative flex h-16 items-center justify-between space-x-4"
+          class="rounded-none border-t dark:border-t-gray-700 relative flex h-16 md:h-auto md:min-h-16 items-center justify-start md:justify-between overflow-x-auto gap-2 md:gap-4 px-2 md:px-6"
         >
           <!-- Part 1 -->
           <div
             v-if="activePart === 1"
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 1"
           >
-            <span class="font-bold">Part 1</span>
-            <div class="flex gap-2" v-for="(i, index) in getPartQuestionCount(1)" :key="index">
+            <span class="font-bold text-sm md:text-base">Part 1</span>
+            <div
+              class="flex gap-1 md:gap-2"
+              v-for="(i, index) in getPartQuestionCount(1)"
+              :key="index"
+            >
               <div class="relative space-y-1">
                 <div
-                  class="absolute bottom-full h-1 w-full rounded-sm bg-gray-200 dark:bg-gray-800"
+                  :class="[
+                    'absolute bottom-full h-1 w-full rounded-sm',
+                    isQuestionAnswered(index + 1)
+                      ? 'bg-green-500 dark:bg-green-600'
+                      : 'bg-gray-200 dark:bg-gray-800',
+                  ]"
                 ></div>
                 <Button
                   :class="[
-                    'cursor-pointer rounded-lg h-8 w-8',
-                    activeQuestion === index && activePart === 1
+                    'cursor-pointer rounded-lg h-7 w-7 md:h-8 md:w-8 text-xs md:text-sm shrink-0',
+                    activeGlobalQuestion === index + 1
                       ? 'bg-blue-500 text-white hover:bg-blue-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
                   ]"
-                  @click.stop="setActiveQuestion(1, index)"
+                  @click.stop="setActiveQuestionByGlobalNumber(index + 1)"
                 >
                   {{ index + 1 }}
                 </Button>
@@ -320,33 +483,44 @@ const highlightText = () => {
 
           <div
             v-else
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 1"
           >
-            <span class="font-bold">Part 1</span>
-            <span class="text-gray-500">{{ getPartQuestionCount(1) }} questions</span>
+            <span class="font-bold text-sm md:text-base">Part 1</span>
+            <span class="text-gray-500 text-xs md:text-sm"
+              >{{ getPartQuestionCount(1) }} questions</span
+            >
           </div>
 
           <!-- Part 2 -->
           <div
             v-if="activePart === 2"
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 2"
           >
-            <span class="font-bold">Part 2</span>
-            <div class="flex gap-2" v-for="(i, index) in getPartQuestionCount(2)" :key="index">
+            <span class="font-bold text-sm md:text-base">Part 2</span>
+            <div
+              class="flex gap-1 md:gap-2"
+              v-for="(i, index) in getPartQuestionCount(2)"
+              :key="index"
+            >
               <div class="relative space-y-1">
                 <div
-                  class="absolute bottom-full h-1 w-full rounded-sm bg-gray-200 dark:bg-gray-800"
+                  :class="[
+                    'absolute bottom-full h-1 w-full rounded-sm',
+                    isQuestionAnswered(index + 1 + getPartQuestionCount(1))
+                      ? 'bg-green-500 dark:bg-green-600'
+                      : 'bg-gray-200 dark:bg-gray-800',
+                  ]"
                 ></div>
                 <Button
                   :class="[
-                    'cursor-pointer rounded-lg h-8 w-8',
-                    activeQuestion === index && activePart === 2
+                    'cursor-pointer rounded-lg h-7 w-7 md:h-8 md:w-8 text-xs md:text-sm shrink-0',
+                    activeGlobalQuestion === index + 1 + getPartQuestionCount(1)
                       ? 'bg-blue-500 text-white hover:bg-blue-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
                   ]"
-                  @click.stop="setActiveQuestion(2, index)"
+                  @click.stop="setActiveQuestionByGlobalNumber(index + 1 + getPartQuestionCount(1))"
                 >
                   {{ index + 1 + getPartQuestionCount(1) }}
                 </Button>
@@ -356,33 +530,51 @@ const highlightText = () => {
 
           <div
             v-else
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 2"
           >
-            <span class="font-bold">Part 2</span>
-            <span class="text-gray-500">{{ getPartQuestionCount(2) }} questions</span>
+            <span class="font-bold text-sm md:text-base">Part 2</span>
+            <span class="text-gray-500 text-xs md:text-sm"
+              >{{ getPartQuestionCount(2) }} questions</span
+            >
           </div>
 
           <!-- Part 3 -->
           <div
             v-if="activePart === 3"
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 3"
           >
-            <span class="font-bold">Part 3</span>
-            <div class="flex gap-2" v-for="(i, index) in getPartQuestionCount(3)" :key="index">
+            <span class="font-bold text-sm md:text-base">Part 3</span>
+            <div
+              class="flex gap-1 md:gap-2"
+              v-for="(i, index) in getPartQuestionCount(3)"
+              :key="index"
+            >
               <div class="relative space-y-1">
                 <div
-                  class="absolute bottom-full h-1 w-full rounded-sm bg-gray-200 dark:bg-gray-800"
+                  :class="[
+                    'absolute bottom-full h-1 w-full rounded-sm',
+                    isQuestionAnswered(
+                      index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2),
+                    )
+                      ? 'bg-green-500 dark:bg-green-600'
+                      : 'bg-gray-200 dark:bg-gray-800',
+                  ]"
                 ></div>
                 <Button
                   :class="[
-                    'cursor-pointer rounded-lg h-8 w-8',
-                    activeQuestion === index && activePart === 3
+                    'cursor-pointer rounded-lg h-7 w-7 md:h-8 md:w-8 text-xs md:text-sm shrink-0',
+                    activeGlobalQuestion ===
+                    index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2)
                       ? 'bg-blue-500 text-white hover:bg-blue-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
                   ]"
-                  @click.stop="setActiveQuestion(3, index)"
+                  @click.stop="
+                    setActiveQuestionByGlobalNumber(
+                      index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2),
+                    )
+                  "
                 >
                   {{ index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2) }}
                 </Button>
@@ -392,11 +584,13 @@ const highlightText = () => {
 
           <div
             v-else
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 3"
           >
-            <span class="font-bold">Part 3</span>
-            <span class="text-gray-500">{{ getPartQuestionCount(3) }} questions</span>
+            <span class="font-bold text-sm md:text-base">Part 3</span>
+            <span class="text-gray-500 text-xs md:text-sm"
+              >{{ getPartQuestionCount(3) }} questions</span
+            >
           </div>
         </div>
       </div>

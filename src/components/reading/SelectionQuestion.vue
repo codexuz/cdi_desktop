@@ -8,7 +8,7 @@
     <!-- Condition/Instructions -->
     <div
       v-if="question.condition"
-      class="instructions mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-500 rounded"
+      class="instructions mb-6 p-4 bg-gray-100 dark:bg-blue-900/30 rounded"
       v-html="question.condition"
     />
 
@@ -18,11 +18,20 @@
         <div
           v-for="(questionItem, index) in processedQuestions"
           :key="index"
-          class="flex items-start gap-3"
+          :data-question-number="startingQuestionNumber + index"
+          class="flex items-start gap-3 p-2 rounded transition-colors"
+          :class="
+            activeQuestionNumber === startingQuestionNumber + index
+              ? 'bg-gray-100 dark:bg-blue-900/20'
+              : ''
+          "
+          @click="emit('question-click', startingQuestionNumber + index)"
         >
           <!-- Question Number and Text -->
-          <div class="flex-1">
-            <span class="font-medium text-gray-800 dark:text-gray-200">{{ index + 1 }}.</span>
+          <div class="flex-1 cursor-pointer">
+            <span class="font-medium text-gray-800 dark:text-gray-200"
+              >{{ startingQuestionNumber + index }}.</span
+            >
             <span class="text-gray-700 dark:text-gray-300 ml-1">{{ questionItem.text }}</span>
           </div>
 
@@ -30,12 +39,13 @@
           <select
             v-model="selectedAnswers[index]"
             @change="updateAnswer(index, selectedAnswers[index] || '')"
+            @click.stop
             class="px-6 py-1.5 my-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
             <option value="">Select</option>
             <option v-for="option in availableOptions" :key="option.value" :value="option.value">
               {{ option.value }}
-               {{ option.label }}
+              {{ option.label }}
             </option>
           </select>
         </div>
@@ -88,15 +98,20 @@ interface Props {
   question: SelectionQuestion
   modelValue?: string[]
   showAnswers?: boolean
+  startingQuestionNumber?: number
+  activeQuestionNumber?: number
 }
 
 interface Emits {
   (e: 'update:modelValue', value: string[]): void
+  (e: 'question-click', questionNumber: number): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: () => [],
   showAnswers: false,
+  startingQuestionNumber: 1,
+  activeQuestionNumber: 1,
 })
 
 const emit = defineEmits<Emits>()
@@ -154,40 +169,53 @@ const processedQuestions = computed(() => {
   return questions
 })
 
-const selectedAnswers = ref<string[]>(
-  props.modelValue?.slice(0, processedQuestions.value.length) ||
-    new Array(processedQuestions.value.length).fill(''),
-)
+// Initialize with empty array, will be populated by watch
+const selectedAnswers = ref<string[]>([])
 
 const updateAnswer = (questionIndex: number, value: string) => {
   selectedAnswers.value[questionIndex] = value
+  // Emit non-empty values only to avoid false positives
   emit('update:modelValue', [...selectedAnswers.value])
 }
+
+// Initialize selectedAnswers based on processedQuestions and modelValue
+watch(
+  processedQuestions,
+  (newQuestions) => {
+    const newLength = newQuestions.length
+    // Initialize array with correct length
+    const newAnswers = new Array(newLength).fill('')
+
+    // Fill with existing values if available
+    if (props.modelValue && Array.isArray(props.modelValue)) {
+      props.modelValue.forEach((val, idx) => {
+        if (idx < newLength) {
+          newAnswers[idx] = val
+        }
+      })
+    }
+
+    selectedAnswers.value = newAnswers
+  },
+  { immediate: true },
+)
 
 // Watch for changes in modelValue prop
 watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue && Array.isArray(newValue)) {
-      selectedAnswers.value = newValue.slice(0, processedQuestions.value.length)
+      const newLength = processedQuestions.value.length
+      const newAnswers = new Array(newLength).fill('')
+
+      newValue.forEach((val, idx) => {
+        if (idx < newLength) {
+          newAnswers[idx] = val
+        }
+      })
+
+      selectedAnswers.value = newAnswers
     }
   },
-  { immediate: true },
-)
-
-// Update selectedAnswers array length when processedQuestions changes
-watch(
-  processedQuestions,
-  (newQuestions) => {
-    const currentLength = selectedAnswers.value.length
-    const newLength = newQuestions.length
-
-    if (newLength !== currentLength) {
-      selectedAnswers.value = new Array(newLength)
-        .fill('')
-        .map((_, index) => selectedAnswers.value[index] || '')
-    }
-  },
-  { immediate: true },
 )
 </script>

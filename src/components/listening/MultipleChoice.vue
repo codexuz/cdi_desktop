@@ -11,10 +11,17 @@
     <div
       v-for="(question, index) in questions"
       :key="question.id"
-      class="mb-6"
+      :data-question-number="startNumber + index"
+      class="mb-6 p-3 rounded transition-colors"
+      :class="
+        activeQuestionNumber === startNumber + index
+          ? 'bg-gray-100 dark:bg-blue-900/20'
+          : ''
+      "
       :ref="(el) => setQuestionRef(startNumber + index, el)"
+      @click="emit('question-click', startNumber + index)"
     >
-      <div class="flex items-start gap-2 mb-2">
+      <div class="flex items-start gap-2 mb-2 cursor-pointer">
         <span
           class="inline-block min-w-[30px] h-6 text-slate-800 dark:text-slate-400 font-bold text-center leading-5 text-sm"
         >
@@ -22,7 +29,7 @@
         </span>
         <span class="text-gray-900 dark:text-gray-100 leading-6">{{ question.question }}</span>
       </div>
-      <div class="flex flex-col gap-1 ml-8">
+      <div class="flex flex-col gap-1 ml-8" @click.stop>
         <label
           v-for="option in question.options"
           :key="option.id"
@@ -68,17 +75,20 @@ interface Props {
   condition?: string
   questions: Question[]
   startNumber: number
+  activeQuestionNumber?: number
   modelValue?: Record<string, string>
 }
 
 const props = withDefaults(defineProps<Props>(), {
   condition: '',
+  activeQuestionNumber: 1,
   modelValue: () => ({}),
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Record<string, string>): void
   (e: 'register-refs', refs: Record<number, HTMLElement>): void
+  (e: 'question-click', questionNumber: number): void
 }>()
 
 const answers = ref<Record<string, string>>({ ...props.modelValue })

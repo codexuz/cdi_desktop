@@ -43,7 +43,11 @@
 
                 <!-- Image if available -->
                 <div v-if="currentTask.visual_url && currentTask.task === `TASK_1`" class="mt-4">
-                  <img :src="currentTask.visual_url" alt="Task visual" class="w-[90%] border rounded" />
+                  <img
+                    :src="currentTask.visual_url"
+                    alt="Task visual"
+                    class="w-[90%] border rounded"
+                  />
                 </div>
               </div>
             </ScrollArea>
@@ -74,34 +78,29 @@
         <!-- Footer Navigation -->
         <div class="rounded-none border-t dark:border-t-gray-700 relative flex h-16 w-full">
           <div
-          :class="
-                  activePart === 1
-                    ? 'border-t-4 border-green-500 dark:border-blue-900'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                "
+            :class="
+              activePart === 1
+                ? 'border-t-4 border-green-500 dark:border-blue-900'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            "
             class="flex w-1/2 h-full items-center cursor-pointer justify-start"
             @click="activePart = 1"
           >
             <div class="flex items-center gap-4 mx-4">
-              <span
-                class="font-bold px-4 py-2 rounded transition-colors"
-              >
-                Part 1
-              </span>
+              <span class="font-bold px-4 py-2 rounded transition-colors"> Part 1 </span>
             </div>
           </div>
-          <div :class="
-                  activePart === 2 
-                    ? 'border-t-4 border-green-500 dark:border-blue-900'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                " class="flex w-1/2 h-full items-center cursor-pointer justify-start" @click="activePart = 2">
+          <div
+            :class="
+              activePart === 2
+                ? 'border-t-4 border-green-500 dark:border-blue-900'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            "
+            class="flex w-1/2 h-full items-center cursor-pointer justify-start"
+            @click="activePart = 2"
+          >
             <div class="flex items-center gap-4 mx-4">
-              <span
-                class="font-bold px-4 py-2 rounded transition-colors"
-                
-              >
-                Part 2
-              </span>
+              <span class="font-bold px-4 py-2 rounded transition-colors"> Part 2 </span>
             </div>
           </div>
         </div>
@@ -111,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get, post } from '@/utils/api'
 import ExamLayout from '@/layouts/ExamLayout.vue'
@@ -119,9 +118,13 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { Textarea } from '@/components/ui/textarea'
+import { useExamAnswersStore } from '@/stores/examAnswers'
+import { useTimerStore } from '@/stores/timer'
 
 const route = useRoute()
 const router = useRouter()
+const examAnswersStore = useExamAnswersStore()
+const timerStore = useTimerStore()
 
 const isLoading = ref(true)
 const error = ref('')
@@ -152,18 +155,63 @@ onMounted(async () => {
     const response = await get('/student/writing')
     writingData.value = response.data
 
+    // Load saved answers from store
+    const savedAnswers = examAnswersStore.getWritingAnswers()
+
     // Initialize answers object
     if (writingData.value?.tasks) {
-      for (const task of writingData.value.tasks) {
-        answers.value[task.id] = ''
+      for (let i = 0; i < writingData.value.tasks.length; i++) {
+        const task = writingData.value.tasks[i]
+        // Use saved answer if exists, otherwise empty string
+        const savedTask = savedAnswers[i]
+        answers.value[task.id] = savedTask?.task_1_answer || savedTask?.task_2_answer || ''
       }
     }
+
+    // Start timer
+    timerStore.start()
+
+    // Listen for timer finished event
+    window.addEventListener('timer-finished', handleTimerFinished)
   } catch (err: any) {
     error.value = err?.response?.data?.message || 'Failed to load writing test.'
   } finally {
     isLoading.value = false
   }
 })
+
+// Handle timer finished
+const handleTimerFinished = async () => {
+  alert('Time is up! Your answers will be submitted automatically.')
+  await submitAnswers()
+  router.push('/') // Redirect to home or results page
+}
+
+// Cleanup on unmount
+onUnmounted(() => {
+  window.removeEventListener('timer-finished', handleTimerFinished)
+})
+
+// Watch answers and save to store
+watch(
+  answers,
+  (newAnswers) => {
+    if (writingData.value?.tasks) {
+      const writingAnswers = writingData.value.tasks.map((task: any, index: number) => {
+        const answer = newAnswers[task.id] || ''
+        const text = answer.trim()
+        const wordCount = text ? text.split(/\s+/).length : 0
+
+        return {
+          [`task_${index + 1}_answer`]: answer,
+          word_count: wordCount,
+        }
+      })
+      examAnswersStore.setWritingAnswers(writingAnswers)
+    }
+  },
+  { deep: true },
+)
 
 const getPartQuestionCount = (part: number) => {
   if (!writingData.value?.tasks || part < 1 || part > writingData.value.tasks.length) return ''
@@ -173,7 +221,16 @@ const getPartQuestionCount = (part: number) => {
 
 const submitAnswers = async () => {
   try {
+    // Set submission timestamp
+    examAnswersStore.setSubmittedAt(new Date().toISOString())
+
     const response = await post('/student/writing/submit', { answers: answers.value })
+
+    // If response includes feedback, save it
+    if (response.data?.feedback) {
+      examAnswersStore.setWritingFeedback(response.data.feedback)
+    }
+
     alert('Answers submitted successfully!')
   } catch (err: any) {
     error.value = err?.response?.data?.message || 'Failed to submit answers.'

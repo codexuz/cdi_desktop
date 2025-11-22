@@ -15,10 +15,17 @@
           <div
             v-for="(question, index) in questions"
             :key="index"
-            class="flex items-center gap-3"
+            :data-question-number="startNumber + index"
+            class="flex items-center gap-3 p-2 rounded transition-colors cursor-pointer"
+            :class="
+              activeQuestionNumber === startNumber + index
+                ? 'bg-gray-100 dark:bg-blue-900/20 '
+                : ''
+            "
             :ref="(el) => setQuestionRef(startNumber + index, el)"
+            @click="emit('question-click', startNumber + index)"
           >
-            <div class="flex-1 flex items-center gap-3">
+            <div class="flex-1 flex items-center gap-3" @click.stop>
               <span
                 class="text-gray-900 dark:text-gray-100 font-normal"
                 v-html="question.text"
@@ -94,6 +101,7 @@ interface Props {
   showOptions?: boolean
   optionsTitle?: string
   startNumber: number
+  activeQuestionNumber?: number
   modelValue?: Record<string, string>
 }
 
@@ -101,12 +109,14 @@ const props = withDefaults(defineProps<Props>(), {
   condition: '',
   showOptions: false,
   optionsTitle: '',
+  activeQuestionNumber: 1,
   modelValue: () => ({}),
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Record<string, string>): void
   (e: 'register-refs', refs: Record<number, HTMLElement>): void
+  (e: 'question-click', questionNumber: number): void
 }>()
 
 const answers = ref<Record<number, string>>({ ...props.modelValue })

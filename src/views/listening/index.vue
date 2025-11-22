@@ -43,8 +43,10 @@
                           :condition="section.condition"
                           :questions="section.questions"
                           :start-number="getStartNumber(part.part, index)"
+                          :active-question-number="activeGlobalQuestion"
                           v-model="answers[part.id][section.id]"
                           @register-refs="registerQuestionRefs"
+                          @question-click="setActiveQuestionByGlobalNumber"
                         />
                         <!-- Selection -->
                         <Selection
@@ -56,8 +58,10 @@
                           :show-options="section.showOptions"
                           :options-title="section.optionsTitle"
                           :start-number="getStartNumber(part.part, index)"
+                          :active-question-number="activeGlobalQuestion"
                           v-model="answers[part.id][section.id]"
                           @register-refs="registerQuestionRefs"
+                          @question-click="setActiveQuestionByGlobalNumber"
                         />
                         <!-- Completion -->
                         <Completion
@@ -66,8 +70,10 @@
                           :condition="section.condition"
                           :content="section.content"
                           :start-number="getStartNumber(part.part, index)"
+                          :active-question-number="activeGlobalQuestion"
                           v-model="answers[part.id][section.id]"
                           @register-refs="registerQuestionRefs"
+                          @question-click="setActiveQuestionByGlobalNumber"
                         />
                         <!-- Multi Select -->
                         <MultiSelect
@@ -79,8 +85,10 @@
                           :show-options="section.showOptions"
                           :options-title="section.optionsTitle"
                           :start-number="getStartNumber(part.part, index)"
+                          :active-question-number="activeGlobalQuestion"
                           v-model="answers[part.id][section.id]"
                           @register-refs="registerQuestionRefs"
+                          @question-click="setActiveQuestionByGlobalNumber"
                         />
                       </div>
                     </div>
@@ -107,28 +115,37 @@
 
         <!-- Footer Navigation -->
         <div
-          class="rounded-none border-t dark:border-t-gray-700 relative flex h-16 items-center justify-around mx-8 space-x-4 overflow-x-auto"
+          class="rounded-none border-t dark:border-t-gray-700 relative flex h-16 md:h-auto md:min-h-16 items-center justify-start md:justify-between overflow-x-auto gap-2 md:gap-4 px-2 md:px-6"
         >
           <!-- Part 1 -->
           <div
             v-if="activePart === 1"
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 1"
           >
-            <span class="font-bold">Part 1</span>
-            <div class="flex gap-2" v-for="(i, index) in getPartQuestionCount(1)" :key="index">
+            <span class="font-bold text-sm md:text-base">Part 1</span>
+            <div
+              class="flex gap-1 md:gap-2"
+              v-for="(i, index) in getPartQuestionCount(1)"
+              :key="index"
+            >
               <div class="relative space-y-1">
                 <div
-                  class="absolute bottom-full h-1 w-full rounded-sm bg-gray-200 dark:bg-gray-800"
+                  :class="[
+                    'absolute bottom-full h-1 w-full rounded-sm',
+                    isQuestionAnswered(index + 1)
+                      ? 'bg-green-500 dark:bg-green-600'
+                      : 'bg-gray-200 dark:bg-gray-800',
+                  ]"
                 ></div>
                 <Button
                   :class="[
-                    'cursor-pointer rounded-lg h-8 w-8',
-                    activeQuestion === index && activePart === 1
+                    'cursor-pointer rounded-lg h-7 w-7 md:h-8 md:w-8 text-xs md:text-sm shrink-0',
+                    activeGlobalQuestion === index + 1
                       ? 'bg-blue-500 text-white hover:bg-blue-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
                   ]"
-                  @click.stop="setActiveQuestion(1, index)"
+                  @click.stop="setActiveQuestionByGlobalNumber(index + 1)"
                 >
                   {{ index + 1 }}
                 </Button>
@@ -137,33 +154,44 @@
           </div>
           <div
             v-else
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 1"
           >
-            <span class="font-bold">Part 1</span>
-            <span class="text-gray-500">{{ getPartQuestionCount(1) }} questions</span>
+            <span class="font-bold text-sm md:text-base">Part 1</span>
+            <span class="text-gray-500 text-xs md:text-sm"
+              >{{ getPartQuestionCount(1) }} questions</span
+            >
           </div>
 
           <!-- Part 2 -->
           <div
             v-if="activePart === 2"
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 2"
           >
-            <span class="font-bold">Part 2</span>
-            <div class="flex gap-2" v-for="(i, index) in getPartQuestionCount(2)" :key="index">
+            <span class="font-bold text-sm md:text-base">Part 2</span>
+            <div
+              class="flex gap-1 md:gap-2"
+              v-for="(i, index) in getPartQuestionCount(2)"
+              :key="index"
+            >
               <div class="relative space-y-1">
                 <div
-                  class="absolute bottom-full h-1 w-full rounded-sm bg-gray-200 dark:bg-gray-800"
+                  :class="[
+                    'absolute bottom-full h-1 w-full rounded-sm',
+                    isQuestionAnswered(index + 1 + getPartQuestionCount(1))
+                      ? 'bg-green-500 dark:bg-green-600'
+                      : 'bg-gray-200 dark:bg-gray-800',
+                  ]"
                 ></div>
                 <Button
                   :class="[
-                    'cursor-pointer rounded-lg h-8 w-8',
-                    activeQuestion === index && activePart === 2
+                    'cursor-pointer rounded-lg h-7 w-7 md:h-8 md:w-8 text-xs md:text-sm shrink-0',
+                    activeGlobalQuestion === index + 1 + getPartQuestionCount(1)
                       ? 'bg-blue-500 text-white hover:bg-blue-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
                   ]"
-                  @click.stop="setActiveQuestion(2, index)"
+                  @click.stop="setActiveQuestionByGlobalNumber(index + 1 + getPartQuestionCount(1))"
                 >
                   {{ index + 1 + getPartQuestionCount(1) }}
                 </Button>
@@ -172,33 +200,51 @@
           </div>
           <div
             v-else
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 2"
           >
-            <span class="font-bold">Part 2</span>
-            <span class="text-gray-500">{{ getPartQuestionCount(2) }} questions</span>
+            <span class="font-bold text-sm md:text-base">Part 2</span>
+            <span class="text-gray-500 text-xs md:text-sm"
+              >{{ getPartQuestionCount(2) }} questions</span
+            >
           </div>
 
           <!-- Part 3 -->
           <div
             v-if="activePart === 3"
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 3"
           >
-            <span class="font-bold">Part 3</span>
-            <div class="flex gap-2" v-for="(i, index) in getPartQuestionCount(3)" :key="index">
+            <span class="font-bold text-sm md:text-base">Part 3</span>
+            <div
+              class="flex gap-1 md:gap-2"
+              v-for="(i, index) in getPartQuestionCount(3)"
+              :key="index"
+            >
               <div class="relative space-y-1">
                 <div
-                  class="absolute bottom-full h-1 w-full rounded-sm bg-gray-200 dark:bg-gray-800"
+                  :class="[
+                    'absolute bottom-full h-1 w-full rounded-sm',
+                    isQuestionAnswered(
+                      index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2),
+                    )
+                      ? 'bg-green-500 dark:bg-green-600'
+                      : 'bg-gray-200 dark:bg-gray-800',
+                  ]"
                 ></div>
                 <Button
                   :class="[
-                    'cursor-pointer rounded-lg h-8 w-8',
-                    activeQuestion === index && activePart === 3
+                    'cursor-pointer rounded-lg h-7 w-7 md:h-8 md:w-8 text-xs md:text-sm shrink-0',
+                    activeGlobalQuestion ===
+                    index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2)
                       ? 'bg-blue-500 text-white hover:bg-blue-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
                   ]"
-                  @click.stop="setActiveQuestion(3, index)"
+                  @click.stop="
+                    setActiveQuestionByGlobalNumber(
+                      index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2),
+                    )
+                  "
                 >
                   {{ index + 1 + getPartQuestionCount(1) + getPartQuestionCount(2) }}
                 </Button>
@@ -207,33 +253,63 @@
           </div>
           <div
             v-else
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 3"
           >
-            <span class="font-bold">Part 3</span>
-            <span class="text-gray-500">{{ getPartQuestionCount(3) }} questions</span>
+            <span class="font-bold text-sm md:text-base">Part 3</span>
+            <span class="text-gray-500 text-xs md:text-sm"
+              >{{ getPartQuestionCount(3) }} questions</span
+            >
           </div>
 
           <!-- Part 4 -->
           <div
             v-if="activePart === 4"
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 4"
           >
-            <span class="font-bold">Part 4</span>
-            <div class="flex gap-2" v-for="(i, index) in getPartQuestionCount(4)" :key="index">
+            <span class="font-bold text-sm md:text-base">Part 4</span>
+            <div
+              class="flex gap-1 md:gap-2"
+              v-for="(i, index) in getPartQuestionCount(4)"
+              :key="index"
+            >
               <div class="relative space-y-1">
                 <div
-                  class="absolute bottom-full h-1 w-full rounded-sm bg-gray-200 dark:bg-gray-800"
+                  :class="[
+                    'absolute bottom-full h-1 w-full rounded-sm',
+                    isQuestionAnswered(
+                      index +
+                        1 +
+                        getPartQuestionCount(1) +
+                        getPartQuestionCount(2) +
+                        getPartQuestionCount(3),
+                    )
+                      ? 'bg-green-500 dark:bg-green-600'
+                      : 'bg-gray-200 dark:bg-gray-800',
+                  ]"
                 ></div>
                 <Button
                   :class="[
-                    'cursor-pointer rounded-lg h-8 w-8',
-                    activeQuestion === index && activePart === 4
+                    'cursor-pointer rounded-lg h-7 w-7 md:h-8 md:w-8 text-xs md:text-sm shrink-0',
+                    activeGlobalQuestion ===
+                    index +
+                      1 +
+                      getPartQuestionCount(1) +
+                      getPartQuestionCount(2) +
+                      getPartQuestionCount(3)
                       ? 'bg-blue-500 text-white hover:bg-blue-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
                   ]"
-                  @click.stop="setActiveQuestion(4, index)"
+                  @click.stop="
+                    setActiveQuestionByGlobalNumber(
+                      index +
+                        1 +
+                        getPartQuestionCount(1) +
+                        getPartQuestionCount(2) +
+                        getPartQuestionCount(3),
+                    )
+                  "
                 >
                   {{
                     index +
@@ -248,11 +324,13 @@
           </div>
           <div
             v-else
-            class="flex h-full flex-1 items-center gap-4 text-nowrap p-2 cursor-pointer"
+            class="flex h-full shrink-0 md:flex-1 items-center gap-2 md:gap-4 text-nowrap p-2 cursor-pointer"
             @click="activePart = 4"
           >
-            <span class="font-bold">Part 4</span>
-            <span class="text-gray-500">{{ getPartQuestionCount(4) }} questions</span>
+            <span class="font-bold text-sm md:text-base">Part 4</span>
+            <span class="text-gray-500 text-xs md:text-sm"
+              >{{ getPartQuestionCount(4) }} questions</span
+            >
           </div>
         </div>
       </div>
@@ -288,6 +366,7 @@ import MultipleChoice from '@/components/listening/MultipleChoice.vue'
 import Selection from '@/components/listening/Selection.vue'
 import Completion from '@/components/listening/Completion.vue'
 import MultiSelect from '@/components/listening/MultiSelect.vue'
+import { useExamAnswersStore } from '@/stores/examAnswers'
 
 const { text } = useTextSelection()
 const selection = ref(null)
@@ -349,6 +428,7 @@ const highlightText = () => {
 
 const route = useRoute()
 const router = useRouter()
+const examAnswersStore = useExamAnswersStore()
 
 const isLoading = ref(true)
 const error = ref('')
@@ -357,6 +437,7 @@ const answers = ref<Record<string, any>>({})
 
 const activePart = ref(parseInt(route.query.part as string) || 1)
 const activeQuestion = ref(parseInt(route.query.question as string) || 0)
+const activeGlobalQuestion = ref(1) // Track the global question number (1-40)
 const questionRefs = ref<Record<number, HTMLElement>>({})
 
 // Audio player state
@@ -376,13 +457,18 @@ onMounted(async () => {
     const response = await get('/student/listening')
     listeningData.value = response.data
 
+    // Load saved answers from store
+    const savedAnswers = examAnswersStore.getListeningAnswers()
+
     // Initialize answers object
     if (listeningData.value?.parts) {
       for (const part of listeningData.value.parts) {
-        answers.value[part.id] = {}
+        answers.value[part.id] = savedAnswers[part.id] || {}
         if (part.question?.content) {
           for (const section of part.question.content) {
-            answers.value[part.id][section.id] = {}
+            if (!answers.value[part.id][section.id]) {
+              answers.value[part.id][section.id] = {}
+            }
           }
         }
       }
@@ -440,6 +526,15 @@ watch([activePart, activeQuestion], ([newPart, newQuestion]) => {
     },
   })
 })
+
+// Watch answers and save to store
+watch(
+  answers,
+  (newAnswers) => {
+    examAnswersStore.setListeningAnswers(newAnswers)
+  },
+  { deep: true },
+)
 
 // Watch active part and load audio
 watch(activePart, (newPart) => {
@@ -537,10 +632,33 @@ const setActiveQuestion = (part: number, questionIndex: number) => {
 
 const getStartNumber = (partName: string, sectionIndex: number) => {
   const partNum = parseInt(partName.replace('PART_', ''))
+
+  // Start with cumulative count from all previous parts
   let start = 1
   for (let i = 1; i < partNum; i++) {
     start += getPartQuestionCount(i)
   }
+
+  // Add questions from previous sections within the same part
+  if (listeningData.value?.parts) {
+    const currentPart = listeningData.value.parts.find((p: any) => p.part === partName)
+    if (currentPart?.question?.content) {
+      for (let i = 0; i < sectionIndex; i++) {
+        const section = currentPart.question.content[i]
+        if (section.type === 'multiple-choice') {
+          start += section.questions?.length || 0
+        } else if (
+          section.type === 'selection' ||
+          section.type === 'completion' ||
+          section.type === 'multi-select'
+        ) {
+          const matches = section.content?.match(/@@/g)
+          start += matches ? matches.length : 0
+        }
+      }
+    }
+  }
+
   return start
 }
 
@@ -548,9 +666,142 @@ const registerQuestionRefs = (refs: Record<number, HTMLElement>) => {
   questionRefs.value = { ...questionRefs.value, ...refs }
 }
 
+const calculateAbsoluteQuestionNumber = (part: number, questionIndex: number) => {
+  let start = 1
+  for (let i = 1; i < part; i++) {
+    start += getPartQuestionCount(i)
+  }
+  return start + questionIndex
+}
+
+const setActiveQuestionByGlobalNumber = (globalQuestionNumber: number) => {
+  // Find which part this question belongs to
+  let currentNum = 1
+  let part = 1
+
+  while (part <= 4) {
+    const partQuestionCount = getPartQuestionCount(part)
+    if (globalQuestionNumber < currentNum + partQuestionCount) {
+      activePart.value = part
+      activeQuestion.value = globalQuestionNumber - currentNum
+      activeGlobalQuestion.value = globalQuestionNumber
+
+      // Scroll to question
+      const element = questionRefs.value[globalQuestionNumber]
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      return
+    }
+    currentNum += partQuestionCount
+    part++
+  }
+}
+
+// Check if a specific question number has been answered
+const isQuestionAnswered = (globalQuestionNumber: number) => {
+  if (!listeningData.value?.parts) return false
+
+  let currentQuestionNum = 1
+
+  // Sort parts by part number to ensure correct order
+  const sortedParts = [...listeningData.value.parts].sort((a, b) => {
+    const partNumA = parseInt(a.part.replace('PART_', ''))
+    const partNumB = parseInt(b.part.replace('PART_', ''))
+    return partNumA - partNumB
+  })
+
+  for (const part of sortedParts) {
+    if (!part.question?.content) continue
+
+    for (const section of part.question.content) {
+      // Calculate section question count
+      let sectionQuestionCount = 0
+      if (section.type === 'multiple-choice') {
+        sectionQuestionCount = section.questions?.length || 0
+      } else if (
+        section.type === 'selection' ||
+        section.type === 'completion' ||
+        section.type === 'multi-select'
+      ) {
+        const matches = section.content?.match(/@@/g)
+        sectionQuestionCount = matches ? matches.length : 0
+      }
+
+      // Check if this global question number falls within this section
+      if (
+        globalQuestionNumber >= currentQuestionNum &&
+        globalQuestionNumber < currentQuestionNum + sectionQuestionCount
+      ) {
+        const sectionAnswers = answers.value[part.id]?.[section.id]
+
+        if (!sectionAnswers) return false
+
+        // For multiple-choice: answers are keyed by question.id
+        if (section.type === 'multiple-choice' && section.questions) {
+          const localIndex = globalQuestionNumber - currentQuestionNum
+          const question = section.questions[localIndex]
+          if (question) {
+            const answer = sectionAnswers[question.id]
+            return (
+              answer !== undefined &&
+              answer !== null &&
+              answer !== '' &&
+              answer.toString().trim() !== ''
+            )
+          }
+          return false
+        }
+
+        // For selection, completion, multi-select: check by global question number
+        if (typeof sectionAnswers === 'object' && !Array.isArray(sectionAnswers)) {
+          const answer = sectionAnswers[globalQuestionNumber]
+          return (
+            answer !== undefined &&
+            answer !== null &&
+            answer !== '' &&
+            answer.toString().trim() !== ''
+          )
+        }
+
+        // For array-based answers
+        if (Array.isArray(sectionAnswers)) {
+          const localIndex = globalQuestionNumber - currentQuestionNum
+          const answer = sectionAnswers[localIndex]
+          return (
+            answer !== undefined &&
+            answer !== null &&
+            answer !== '' &&
+            answer.toString().trim() !== ''
+          )
+        }
+
+        return false
+      }
+
+      currentQuestionNum += sectionQuestionCount
+    }
+  }
+
+  return false
+}
+
 const submitAnswers = async () => {
   try {
+    // Set submission timestamp
+    examAnswersStore.setSubmittedAt(new Date().toISOString())
+
     const response = await post('/student/listening/submit', { answers: answers.value })
+
+    // If response includes results, save them
+    if (response.data?.score !== undefined) {
+      examAnswersStore.setListeningResults(
+        response.data.score,
+        response.data.correct || 0,
+        response.data.incorrect || 0,
+      )
+    }
+
     alert('Answers submitted successfully!')
   } catch (err: any) {
     error.value = err?.response?.data?.message || 'Failed to submit answers.'

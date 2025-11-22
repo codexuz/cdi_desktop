@@ -11,10 +11,7 @@
     </div>
 
     <!-- Question Content -->
-    <div
-      class="content text-[#374151] dark:text-gray-400"
-      v-html="processedContent"
-    />
+    <div class="content text-[#374151] dark:text-gray-400" ref="contentContainer"></div>
   </div>
 </template>
 
@@ -32,94 +29,155 @@ interface Props {
   question: CompletionQuestion
   modelValue?: string[]
   showAnswers?: boolean
+  startingQuestionNumber?: number
+  activeQuestionNumber?: number
 }
 
 interface Emits {
   (e: 'update:modelValue', value: string[]): void
+  (e: 'question-click', questionNumber: number): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: () => [],
   showAnswers: false,
+  startingQuestionNumber: 1,
+  activeQuestionNumber: 1,
 })
 
 const emit = defineEmits<Emits>()
 
-const answers = ref<string[]>(props.modelValue || [])
+const answers = ref<string[]>([])
+const contentContainer = ref<HTMLElement | null>(null)
+const inputElements = ref<HTMLInputElement[]>([])
 
-// Process content to replace @@ with input fields
-const processedContent = computed(() => {
+// Count the number of blanks in the content
+const blankCount = computed(() => {
+  const matches = props.question.content.match(/@@/g)
+  return matches ? matches.length : 0
+})
+
+// Render content with input fields
+const renderContent = () => {
+  if (!contentContainer.value) return
+
   let content = props.question.content
   let blankIndex = 0
+  const tempDiv = document.createElement('div')
 
-  // Replace @@ with input fields
+  // Replace @@ with placeholder spans
   content = content.replace(/@@/g, () => {
-    const currentIndex = blankIndex++
-    return ` <input 
-      type="text" 
-      class="blank-input my-1 text-center text-slate-900 dark:text-white border-2 border-gray-300 dark:border-slate-600 rounded-sm focus:outline-none focus:border-2 focus:border-blue-500 px-2 py-1" 
-      data-blank-index="${currentIndex}"
-      placeholder="${currentIndex + 1}"
-      value="${answers.value[currentIndex] || ''}"
-    />`
+    return `<span data-input-placeholder="${blankIndex++}"></span>`
   })
 
-  return content
-})
+  tempDiv.innerHTML = content
+  contentContainer.value.innerHTML = ''
+  contentContainer.value.appendChild(tempDiv)
 
-// Handle input changes
-const handleInputChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const index = parseInt(target.dataset.blankIndex || '0')
+  // Initialize answers array with correct length
+  const newAnswers = new Array(blankCount.value).fill('')
 
-  // Update answers array
-  const newAnswers = [...answers.value]
-  newAnswers[index] = target.value
+  // Preserve existing values from props or current state
+  const existingAnswers =
+    props.modelValue && Array.isArray(props.modelValue) ? props.modelValue : answers.value
+
+  existingAnswers.forEach((val, i) => {
+    if (i < blankCount.value && val) {
+      newAnswers[i] = val
+    }
+  })
+
   answers.value = newAnswers
 
-  // Emit the updated value
-  emit('update:modelValue', newAnswers)
-}
+  // Now replace placeholders with actual input elements
+  const placeholders = contentContainer.value.querySelectorAll('[data-input-placeholder]')
+  inputElements.value = []
 
-// Set up event listeners when component mounts
-onMounted(() => {
-  // Add event listeners to all input fields
-  const inputs = document.querySelectorAll('.blank-input')
-  inputs.forEach((input) => {
-    input.addEventListener('input', handleInputChange)
+  placeholders.forEach((placeholder) => {
+    const index = parseInt(placeholder.getAttribute('data-input-placeholder') || '0')
+    const questionNumber = props.startingQuestionNumber + index
+    const isActive = props.activeQuestionNumber === questionNumber
+
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.className = `blank-input my-1 text-center text-slate-900 dark:text-white border-2 rounded-sm focus:outline-none px-2 py-1 transition-colors ${
+      isActive
+        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+        : 'border-gray-300 dark:border-slate-600 focus:border-blue-500'
+    }`
+    input.setAttribute('data-blank-index', index.toString())
+    input.setAttribute('data-question-number', questionNumber.toString())
+    input.placeholder = questionNumber.toString()
+    input.value = answers.value[index] || ''
+
+    // Handle input changes
+    input.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement
+      const idx = parseInt(target.getAttribute('data-blank-index') || '0')
+      const newAnswers = [...answers.value]
+      newAnswers[idx] = target.value
+      answers.value = newAnswers
+      emit('update:modelValue', newAnswers)
+    })
+
+    // Handle click to activate question
+    input.addEventListener('click', () => {
+      emit('question-click', questionNumber)
+    })
+
+    placeholder.parentNode?.replaceChild(input, placeholder)
+    inputElements.value.push(input)
   })
-})
+}
 
 // Watch for changes in modelValue prop
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (newValue) {
+    if (newValue && Array.isArray(newValue)) {
       answers.value = [...newValue]
+      // Update input values
+      inputElements.value.forEach((input, index) => {
+        if (input && answers.value[index] !== undefined) {
+          input.value = answers.value[index]
+        }
+      })
     }
   },
-  { immediate: true },
 )
 
-// Update input values when answers change
+// Watch for active question changes to update styling
 watch(
-  answers,
+  () => props.activeQuestionNumber,
   () => {
-    nextTick(() => {
-      const inputs = document.querySelectorAll('.blank-input') as NodeListOf<HTMLInputElement>
-      inputs.forEach((input, index) => {
-        input.value = answers.value[index] || ''
-      })
+    inputElements.value.forEach((input, index) => {
+      if (input) {
+        const questionNumber = props.startingQuestionNumber + index
+        const isActive = props.activeQuestionNumber === questionNumber
+        if (isActive) {
+          input.className =
+            'blank-input my-1 text-center text-slate-900 dark:text-white border-2 rounded-sm focus:outline-none px-2 py-1 transition-colors border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+        } else {
+          input.className =
+            'blank-input my-1 text-center text-slate-900 dark:text-white border-2 rounded-sm focus:outline-none px-2 py-1 transition-colors border-gray-300 dark:border-slate-600 focus:border-blue-500'
+        }
+      }
     })
   },
-  { deep: true },
 )
 
-// Cleanup event listeners on unmount
-onUnmounted(() => {
-  const inputs = document.querySelectorAll('.blank-input')
-  inputs.forEach((input) => {
-    input.removeEventListener('input', handleInputChange)
-  })
+// Initialize content when component mounts
+onMounted(() => {
+  renderContent()
 })
+
+// Re-render when question content changes
+watch(
+  () => props.question.content,
+  () => {
+    nextTick(() => {
+      renderContent()
+    })
+  },
+)
 </script>

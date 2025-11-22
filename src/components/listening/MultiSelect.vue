@@ -36,6 +36,7 @@ interface Props {
   startNumber: number
   maxSelections?: number
   modelValue?: Record<string, string[]>
+  activeQuestionNumber?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -44,11 +45,13 @@ const props = withDefaults(defineProps<Props>(), {
   optionsTitle: '',
   maxSelections: 4,
   modelValue: () => ({}),
+  activeQuestionNumber: 1,
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Record<string, string[]>): void
   (e: 'register-refs', refs: Record<number, HTMLElement>): void
+  (e: 'question-click', questionNumber: number): void
 }>()
 
 const processedContent = computed(() => {
@@ -58,9 +61,11 @@ const processedContent = computed(() => {
   // Replace @@ with multi-select checkboxes
   content = content.replace(/@@/g, () => {
     const currentNum = questionNum++
-    return `<div class="question-wrapper" data-question="${currentNum}">
+    const isActive = currentNum === props.activeQuestionNumber
+    const activeClass = isActive ? 'bg-blue-50' : ''
+    return `<div class="question-wrapper ${activeClass}" data-question-number="${currentNum}" data-question="${currentNum}" onclick="event.target.closest('.multi-select').dispatchEvent(new CustomEvent('question-click', {detail: ${currentNum}, bubbles: true}))">
       <span class="question-number">${currentNum}</span>
-      <div class="multi-select-group" data-question="${currentNum}">
+      <div class="multi-select-group" data-question="${currentNum}" onclick="event.stopPropagation()">
         ${props.options
           .map(
             (opt) =>
@@ -115,6 +120,14 @@ onMounted(() => {
   document.querySelectorAll('.multi-select-checkbox').forEach((checkbox) => {
     checkbox.addEventListener('change', handleCheckboxChange)
   })
+
+  // Add question click listener
+  const multiSelectEl = document.querySelector('.multi-select')
+  if (multiSelectEl) {
+    multiSelectEl.addEventListener('question-click', ((e: CustomEvent) => {
+      emit('question-click', e.detail)
+    }) as EventListener)
+  }
 })
 </script>
 
