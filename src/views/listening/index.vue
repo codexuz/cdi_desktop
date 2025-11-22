@@ -411,13 +411,16 @@ const getPartQuestionRange = () => {
 const setActiveQuestion = (part: number, questionIndex: number) => {
   activePart.value = part
   activeQuestion.value = questionIndex
-  
+
   // Calculate absolute question number and scroll to it
-  const absoluteQuestionNum = Array.from({ length: part - 1 }, (_, i) => getPartQuestionCount(i + 1)).reduce(
-    (a, b) => a + b,
-    0,
-  ) + questionIndex + 1
-  
+  const absoluteQuestionNum =
+    Array.from({ length: part - 1 }, (_, i) => getPartQuestionCount(i + 1)).reduce(
+      (a, b) => a + b,
+      0,
+    ) +
+    questionIndex +
+    1
+
   const element = questionRefs.value[absoluteQuestionNum]
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' })
