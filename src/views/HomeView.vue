@@ -309,12 +309,18 @@ onMounted(async () => {
 
   // Fetch assignment data
   try {
+     const listening = await get('/student/listening')
+     console.log('Fetched listening data:', listening.data)
     const response = await get('/student/assignment')
     testData.value = response.data
     candidateId.value = response.data.candidate_id || response.data.student.name // Assuming candidate_id or use name
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error fetching assignment:', err)
-    error.value = 'Failed to load assignment data.'
+    if (err?.response?.status === 404) {
+      error.value = err?.response?.data?.message || 'No assignment found for your account.'
+    } else {
+      error.value = 'Failed to load assignment data.'
+    }
   } finally {
     isLoading.value = false
   }

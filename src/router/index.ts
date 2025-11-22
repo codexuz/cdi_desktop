@@ -20,6 +20,11 @@ const router = createRouter({
       name: 'reading',
       component: () => import('../views/reading/index.vue'),
     },
+    {
+      path: '/listening/:id',
+      name: 'listening',
+      component: () => import('../views/listening/index.vue'),
+    },
   ],
 })
 
