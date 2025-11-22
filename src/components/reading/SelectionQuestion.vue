@@ -1,5 +1,5 @@
 <template>
-  <div class="selection-question bg-white dark:bg-gray-800 p-6">
+  <div class="selection-question p-6">
     <!-- Title -->
     <h3 v-if="question.title" class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">
       {{ question.title }}
