@@ -204,7 +204,7 @@ const highlightText = () => {
                   <div
                     v-if="currentPart?.passage"
                     v-html="currentPart.passage"
-                    class="prose max-w-none dark:prose-invert"
+                    class="text-lg max-w-none dark:prose-invert"
                   ></div>
                   <div v-else class="text-center py-12">
                     <p class="text-gray-500">No passage available</p>
