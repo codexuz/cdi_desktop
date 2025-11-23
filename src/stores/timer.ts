@@ -1,20 +1,39 @@
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
-const STORAGE_KEY = 'cdi_exam_timer'
-const TOTAL_TIME = 60 * 60 // 60 minutes in seconds
+const STORAGE_KEY_PREFIX = 'cdi_exam_timer'
+
+// Default time durations in seconds
+const DEFAULT_TIMES = {
+  reading: 60 * 60, // 60 minutes
+  writing: 60 * 60, // 60 minutes
+  listening: 30 * 60, // 30 minutes
+  speaking: 15 * 60, // 15 minutes
+}
 
 interface TimerState {
   remainingTime: number
   isActive: boolean
   startTime: number | null
+  examType: string
+  totalTime: number
 }
 
 export const useTimerStore = defineStore('timer', () => {
+  const examType = ref<string>('reading')
+  const totalTime = ref<number>(DEFAULT_TIMES.reading)
+  const remainingTime = ref(0)
+  const isActive = ref(false)
+  const startTime = ref<number | null>(null)
+  let intervalId: number | null = null
+
+  // Get storage key for current exam type
+  const getStorageKey = () => `${STORAGE_KEY_PREFIX}_${examType.value}`
+
   // Load from localStorage or initialize
   const loadFromStorage = (): TimerState => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = localStorage.getItem(getStorageKey())
       if (stored) {
         const state = JSON.parse(stored)
         // Calculate elapsed time if timer was active
@@ -24,7 +43,9 @@ export const useTimerStore = defineStore('timer', () => {
           return {
             remainingTime: remaining,
             isActive: state.isActive && remaining > 0,
-            startTime: Date.now()
+            startTime: Date.now(),
+            examType: state.examType,
+            totalTime: state.totalTime,
           }
         }
         return state
@@ -33,22 +54,21 @@ export const useTimerStore = defineStore('timer', () => {
       console.error('Failed to load timer from localStorage:', error)
     }
     return {
-      remainingTime: TOTAL_TIME,
+      remainingTime: totalTime.value,
       isActive: false,
-      startTime: null
+      startTime: null,
+      examType: examType.value,
+      totalTime: totalTime.value,
     }
   }
-
-  const remainingTime = ref(0)
-  const isActive = ref(false)
-  const startTime = ref<number | null>(null)
-  let intervalId: number | null = null
 
   // Initialize from storage
   const initState = loadFromStorage()
   remainingTime.value = initState.remainingTime
   isActive.value = initState.isActive
   startTime.value = initState.startTime
+  examType.value = initState.examType
+  totalTime.value = initState.totalTime
 
   // Save to localStorage
   const saveToStorage = () => {
@@ -56,16 +76,18 @@ export const useTimerStore = defineStore('timer', () => {
       const state: TimerState = {
         remainingTime: remainingTime.value,
         isActive: isActive.value,
-        startTime: startTime.value
+        startTime: startTime.value,
+        examType: examType.value,
+        totalTime: totalTime.value,
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+      localStorage.setItem(getStorageKey(), JSON.stringify(state))
     } catch (error) {
       console.error('Failed to save timer to localStorage:', error)
     }
   }
 
   // Watch for changes and save
-  watch([remainingTime, isActive, startTime], () => {
+  watch([remainingTime, isActive, startTime, examType, totalTime], () => {
     saveToStorage()
   })
 
@@ -79,7 +101,7 @@ export const useTimerStore = defineStore('timer', () => {
     intervalId = setInterval(() => {
       if (remainingTime.value > 0) {
         remainingTime.value--
-        
+
         // Auto-finish when time reaches 0
         if (remainingTime.value === 0) {
           stop()
@@ -102,20 +124,52 @@ export const useTimerStore = defineStore('timer', () => {
     startTime.value = null
   }
 
+  // Initialize timer for specific exam type
+  const initialize = (
+    type: 'reading' | 'writing' | 'listening' | 'speaking',
+    duration?: number,
+  ) => {
+    stop()
+    examType.value = type
+    totalTime.value = duration || DEFAULT_TIMES[type]
+
+    // Try to load from storage for this exam type
+    const state = loadFromStorage()
+    remainingTime.value = state.remainingTime
+    isActive.value = state.isActive
+    startTime.value = state.startTime
+
+    // Resume if was active
+    if (isActive.value && remainingTime.value > 0) {
+      start()
+    }
+  }
+
   // Reset timer
   const reset = () => {
     stop()
-    remainingTime.value = TOTAL_TIME
+    remainingTime.value = totalTime.value
     startTime.value = null
   }
 
   // Clear timer from storage
   const clear = () => {
     stop()
-    remainingTime.value = TOTAL_TIME
+    remainingTime.value = totalTime.value
     isActive.value = false
     startTime.value = null
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(getStorageKey())
+  }
+
+  // Clear all timers from storage
+  const clearAll = () => {
+    stop()
+    Object.keys(DEFAULT_TIMES).forEach((type) => {
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}_${type}`)
+    })
+    remainingTime.value = totalTime.value
+    isActive.value = false
+    startTime.value = null
   }
 
   // Format time as MM:SS
@@ -127,12 +181,17 @@ export const useTimerStore = defineStore('timer', () => {
 
   // Get percentage completed
   const percentageCompleted = () => {
-    return ((TOTAL_TIME - remainingTime.value) / TOTAL_TIME) * 100
+    return ((totalTime.value - remainingTime.value) / totalTime.value) * 100
   }
 
   // Check if timer has expired
   const isExpired = () => {
     return remainingTime.value === 0
+  }
+
+  // Get remaining time in minutes
+  const remainingMinutes = () => {
+    return Math.ceil(remainingTime.value / 60)
   }
 
   // Resume timer if it was active
@@ -141,15 +200,20 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   return {
+    examType,
+    totalTime,
     remainingTime,
     isActive,
     startTime,
+    initialize,
     start,
     stop,
     reset,
     clear,
+    clearAll,
     formattedTime,
     percentageCompleted,
-    isExpired
+    isExpired,
+    remainingMinutes,
   }
 })

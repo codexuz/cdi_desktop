@@ -254,7 +254,7 @@ const startTest = async (testId: string) => {
 
     console.log('Test started successfully:', response.data)
     // Redirect to the test page or update status
-    router.push(`/tests`)
+    router.push(`/listening/${testId}`)
   } catch (error) {
     console.error('Error starting test:', error)
     alert('Failed to start test. Please try again.')

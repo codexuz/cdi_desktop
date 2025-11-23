@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { useTextSelection } from '@vueuse/core'
 import ExamLayout from '@/layouts/ExamLayout.vue'
+import ExamHeader from '@/components/ExamHeader.vue'
 const { text } = useTextSelection()
 import { Copy, Highlighter, Trash2Icon } from 'lucide-vue-next'
 import {
@@ -58,7 +59,8 @@ onMounted(async () => {
     const savedAnswers = examAnswersStore.getReadingAnswers()
     answers.value = Object.keys(savedAnswers).length > 0 ? savedAnswers : {}
 
-    // Start timer
+    // Initialize and start timer for reading (60 minutes)
+    timerStore.initialize('reading', 60 * 60)
     timerStore.start()
 
     // Listen for timer finished event
@@ -70,11 +72,19 @@ onMounted(async () => {
   }
 })
 
-// Handle timer finished
+// Handle finish button click
+const handleFinish = async () => {
+  // Stop and clear the reading timer
+  timerStore.stop()
+  timerStore.clear()
+
+  // Note: Navigation to next route is handled by ExamHeader component
+  // Answers are already saved to store via the watch
+}
+
+// Handle timer finished (automatic expiration)
 const handleTimerFinished = async () => {
-  alert('Time is up! Your answers will be submitted automatically.')
-  await submitAnswers()
-  router.push('/') // Redirect to home or results page
+  handleFinish()
 }
 
 // Cleanup on unmount
@@ -318,7 +328,10 @@ const highlightText = () => {
 </script>
 
 <template>
-  <ExamLayout title="Reading">
+  <ExamLayout>
+    <template #header>
+      <ExamHeader title="Reading" :timer="true" @finish="handleFinish" />
+    </template>
     <div class="min-w-0 flex-1 overflow-y-auto">
       <div class="h-full flex flex-col">
         <div v-if="isLoading" class="m-4 text-center py-12">

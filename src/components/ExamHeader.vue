@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Sun, Moon } from 'lucide-vue-next'
 import { useDark, useToggle } from '@vueuse/core'
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, computed } from 'vue'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -13,43 +13,92 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { useTimerStore } from '@/stores/timer'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
 const timerStore = useTimerStore()
 const router = useRouter()
+const route = useRoute()
 
 const toggleTheme = () => {
   toggleDark()
 }
 
-defineProps({
+const props = defineProps({
   title: String,
   timer: {
     type: Boolean,
     default: true,
   },
+  onFinish: {
+    type: Function,
+    default: null,
+  },
 })
+
+const emit = defineEmits(['finish'])
 
 const open = ref(false)
 
-// Watch for timer expiration
+// Determine exam type and test ID from route
+const examType = computed(() => {
+  const path = route.path
+  if (path.includes('/listening/')) return 'listening'
+  if (path.includes('/reading/')) return 'reading'
+  if (path.includes('/writing/')) return 'writing'
+  return null
+})
+
+const testId = computed(() => route.params.id as string)
+
+// Determine next route based on current exam type
+const getNextRoute = () => {
+  const currentType = examType.value
+  const id = testId.value
+
+  if (currentType === 'listening') {
+    return `/reading/${id}`
+  } else if (currentType === 'reading') {
+    return `/writing/${id}`
+  } else if (currentType === 'writing') {
+    return '/' // Go to home after writing (will submit in component)
+  }
+  return '/'
+}
+
+// Watch for timer expiration (only for reading and writing)
 watch(
   () => timerStore.isExpired(),
   (expired) => {
-    if (expired) {
+    if (expired && props.timer) {
       alert('Time is up! The exam will now finish.')
       handleFinish()
     }
   },
 )
 
-const handleFinish = () => {
-  // Stop the timer
-  timerStore.stop()
-  // Navigate to results or home page
-  router.push('/tests')
+const handleFinish = async () => {
+  // Stop the timer if it's running
+  if (props.timer) {
+    timerStore.stop()
+  }
+
+  // If onFinish callback is provided, call it (for submitting answers)
+  if (props.onFinish) {
+    try {
+      await props.onFinish()
+    } catch (error) {
+      console.error('Error in onFinish callback:', error)
+    }
+  }
+
+  // Emit finish event to parent component
+  emit('finish')
+
+  // Navigate to next route
+  const nextRoute = getNextRoute()
+  router.push(nextRoute)
 }
 
 // Cleanup on unmount

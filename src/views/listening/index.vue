@@ -1,5 +1,8 @@
 <template>
-  <ExamLayout title="Listening" :timer="false">
+  <ExamLayout>
+    <template #header>
+      <ExamHeader title="Listening" :timer="false"/>
+    </template>
     <div class="min-w-0 flex-1 overflow-y-auto">
       <div class="h-full flex flex-col">
         <!-- Main Content -->
@@ -351,6 +354,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get, post } from '@/utils/api'
 import ExamLayout from '@/layouts/ExamLayout.vue'
+import ExamHeader from '@/components/ExamHeader.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'

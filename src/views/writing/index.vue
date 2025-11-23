@@ -1,5 +1,8 @@
 <template>
   <ExamLayout title="Writing">
+    <template #header>
+      <ExamHeader title="Writing" :timer="true" :onFinish="submitAnswers" @finish="cleanup" />
+    </template>
     <div class="min-w-0 flex-1 overflow-y-auto">
       <div class="h-full flex flex-col">
         <!-- Header Card -->
@@ -61,7 +64,7 @@
               <div class="flex-1 relative">
                 <Textarea
                   v-model="answers[currentTask.id]"
-                  class="w-[90%] mx-auto p-4 rounded min-h-[160px] m-3 focus:outline-none bg-transparent text-gray-900 dark:text-gray-100"
+                  class="w-[90%] mx-auto p-4 rounded min-h-40 m-3 focus:outline-none bg-transparent text-gray-900 dark:text-gray-100"
                   placeholder="Write your answer here..."
                 ></Textarea>
                 <!-- Word Counter -->
@@ -114,6 +117,7 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get, post } from '@/utils/api'
 import ExamLayout from '@/layouts/ExamLayout.vue'
+import ExamHeader from '@/components/ExamHeader.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
@@ -168,7 +172,8 @@ onMounted(async () => {
       }
     }
 
-    // Start timer
+    // Initialize and start timer for writing (60 minutes)
+    timerStore.initialize('writing', 60 * 60)
     timerStore.start()
 
     // Listen for timer finished event
@@ -182,7 +187,6 @@ onMounted(async () => {
 
 // Handle timer finished
 const handleTimerFinished = async () => {
-  alert('Time is up! Your answers will be submitted automatically.')
   await submitAnswers()
   router.push('/') // Redirect to home or results page
 }
@@ -222,9 +226,18 @@ const getPartQuestionCount = (part: number) => {
 const submitAnswers = async () => {
   try {
     // Set submission timestamp
-    examAnswersStore.setSubmittedAt(new Date().toISOString())
+    const submittedAt = new Date().toISOString()
+    examAnswersStore.setSubmittedAt(submittedAt)
 
-    const response = await post('/student/writing/submit', { answers: answers.value })
+    // Calculate total time spent (in minutes)
+    const totalTimeSpent = Math.floor(timerStore.totalTime - timerStore.remainingTime) / 60
+    examAnswersStore.setTotalTimeSpent(totalTimeSpent)
+
+    // Get the full test results from store
+    const testResults = examAnswersStore.getTestResults()
+
+    // Send the entire test_results structure matching API format
+    const response = await post('/student/submit-test', { test_results: testResults })
 
     // If response includes feedback, save it
     if (response.data?.feedback) {
@@ -234,7 +247,19 @@ const submitAnswers = async () => {
     alert('Answers submitted successfully!')
   } catch (err: any) {
     error.value = err?.response?.data?.message || 'Failed to submit answers.'
+    throw err // Re-throw so ExamHeader knows submission failed
   }
+}
+
+const cleanup = () => {
+  // Stop the timer
+  timerStore.stop()
+
+  // Clear timer from localStorage
+  timerStore.clear()
+
+  // Clear all exam answers from localStorage
+  examAnswersStore.clearAllAnswers()
 }
 </script>
 
