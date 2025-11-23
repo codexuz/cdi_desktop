@@ -1,7 +1,8 @@
 <template>
   <ExamLayout title="Writing">
+    <Toaster />
     <template #header>
-      <ExamHeader title="Writing" :timer="true" :onFinish="submitAnswers" @finish="cleanup" />
+      <ExamHeader title="Writing" :timer="true" @finish="cleanup" />
     </template>
     <div class="min-w-0 flex-1 overflow-y-auto">
       <div class="h-full flex flex-col">
@@ -124,6 +125,8 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { Textarea } from '@/components/ui/textarea'
 import { useExamAnswersStore } from '@/stores/examAnswers'
 import { useTimerStore } from '@/stores/timer'
+import { toast } from 'vue-sonner'
+import { Toaster } from '@/components/ui/sonner'
 
 const route = useRoute()
 const router = useRouter()
@@ -244,17 +247,18 @@ const submitAnswers = async () => {
       examAnswersStore.setWritingFeedback(response.data.feedback)
     }
 
-    alert('Answers submitted successfully!')
+    toast.success('Answers submitted successfully!')
   } catch (err: any) {
     error.value = err?.response?.data?.message || 'Failed to submit answers.'
+    toast.error(error.value)
     throw err // Re-throw so ExamHeader knows submission failed
   }
 }
 
-const cleanup = () => {
+const cleanup = async () => {
   // Stop the timer
   timerStore.stop()
-
+  await submitAnswers()
   // Clear timer from localStorage
   timerStore.clear()
 
