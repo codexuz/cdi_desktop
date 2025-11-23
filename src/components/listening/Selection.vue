@@ -18,9 +18,7 @@
             :data-question-number="startNumber + index"
             class="flex items-center gap-3 p-2 rounded transition-colors cursor-pointer"
             :class="
-              activeQuestionNumber === startNumber + index
-                ? 'bg-gray-100 dark:bg-blue-900/20 '
-                : ''
+              activeQuestionNumber === startNumber + index ? 'bg-gray-100 dark:bg-blue-900/20 ' : ''
             "
             :ref="(el) => setQuestionRef(startNumber + index, el)"
             @click="emit('question-click', startNumber + index)"
@@ -69,13 +67,12 @@
             @dragend="onDragEnd"
             class="border rounded px-3 py-2 bg-white dark:bg-gray-700 transition-all text-gray-900 dark:text-gray-100"
             :class="
-              isOptionUsed(option.value)
-                ? 'border-gray-300 dark:border-gray-600 opacity-40 cursor-not-allowed'
-                : draggedOption === option.value
-                  ? 'border-blue-500 opacity-60'
-                  : 'border-gray-300 dark:border-gray-600 cursor-move hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'
+              draggedOption === option.value
+                ? 'border-blue-500 opacity-60'
+                : 'border-gray-300 dark:border-gray-600 cursor-move hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'
             "
           >
+            {{ option.value }} -
             {{ option.label }}
           </div>
         </div>
@@ -151,10 +148,6 @@ const isOptionUsed = (value: string) => {
 }
 
 const onDragStart = (event: DragEvent, value: string) => {
-  if (isOptionUsed(value)) {
-    event.preventDefault()
-    return
-  }
   draggedOption.value = value
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'
@@ -172,7 +165,7 @@ const onDrop = (event: DragEvent, questionNum: number) => {
   dragOverQuestion.value = null
 
   const value = event.dataTransfer?.getData('text/plain')
-  if (value && !isOptionUsed(value)) {
+  if (value) {
     answers.value[questionNum] = value
     emit('update:modelValue', { ...answers.value })
   }

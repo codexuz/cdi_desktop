@@ -1,24 +1,65 @@
 <template>
-  <div class="multi-select">
-    <div class="question-header">
-      <h3>{{ title }}</h3>
-      <p v-if="condition" class="condition" v-html="condition"></p>
+  <div class="mb-8">
+    <div class="mb-4">
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3">{{ title }}</h3>
+      <div v-if="condition" class="text-gray-600 dark:text-gray-400 mb-4" v-html="condition"></div>
     </div>
-    <div v-if="showOptions && optionsTitle" class="options-box">
-      <h4>{{ optionsTitle }}</h4>
-      <div class="options-list">
-        <div v-for="option in options" :key="option.id" class="option-item">
-          <span class="option-value">{{ option.value }}</span>
-          <span v-if="option.label" class="option-label">{{ option.label }}</span>
-        </div>
+
+    <!-- This is multi-select spanning multiple question numbers -->
+    <div
+      :ref="setContainerRef"
+      class="grid w-[60%] gap-3 mt-4 p-3 rounded transition-colors"
+      :class="isActiveRange ? 'bg-gray-100 dark:bg-blue-900/20' : ''"
+    >
+      <div class="flex gap-2 mb-2">
+        <span
+          v-for="i in limit"
+          :key="i"
+          class="inline-block min-w-[30px] h-6 text-slate-800 dark:text-slate-400 font-bold text-center leading-5 text-sm cursor-pointer"
+          :class="
+            activeQuestionNumber === startNumber + i - 1 ? 'bg-blue-500 text-white rounded' : ''
+          "
+          @click="emit('question-click', startNumber + i - 1)"
+        >
+          {{ startNumber + i - 1 }}
+        </span>
       </div>
+
+      <label
+        v-for="option in options"
+        :key="option.id"
+        class="flex items-center gap-3 px-4 py-3"
+        :class="
+          !isSelected(option.value) && selectedCount >= limit
+            ? 'opacity-50 cursor-not-allowed'
+            : 'cursor-pointer'
+        "
+        @click.stop
+      >
+        <input
+          type="checkbox"
+          :value="option.value"
+          :checked="isSelected(option.value)"
+          :disabled="!isSelected(option.value) && selectedCount >= limit"
+          @change="handleCheckboxChange(option.value)"
+          class="w-4 h-4 accent-blue-600"
+          :class="
+            !isSelected(option.value) && selectedCount >= limit
+              ? 'cursor-not-allowed'
+              : 'cursor-pointer'
+          "
+        />
+        <span class="font-semibold text-slate-600 dark:text-slate-200 text-base min-w-6">
+          {{ option.value }}
+        </span>
+        <span class="text-gray-700 dark:text-gray-300 flex-1">{{ option.label }}</span>
+      </label>
     </div>
-    <div class="content" v-html="processedContent"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 
 interface Option {
   id: string
@@ -29,200 +70,113 @@ interface Option {
 interface Props {
   title: string
   condition?: string
-  content: string
   options: Option[]
-  showOptions?: boolean
-  optionsTitle?: string
   startNumber: number
-  maxSelections?: number
-  modelValue?: Record<string, string[]>
+  limit: number
+  modelValue?: Record<number, string>
   activeQuestionNumber?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   condition: '',
-  showOptions: false,
-  optionsTitle: '',
-  maxSelections: 4,
+  limit: 3,
   modelValue: () => ({}),
-  activeQuestionNumber: 1,
+  activeQuestionNumber: 0,
 })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: Record<string, string[]>): void
+  (e: 'update:modelValue', value: Record<number, string>): void
   (e: 'register-refs', refs: Record<number, HTMLElement>): void
   (e: 'question-click', questionNumber: number): void
 }>()
 
-const processedContent = computed(() => {
-  let content = props.content
-  let questionNum = props.startNumber
+const questionElements = ref<Record<number, HTMLElement>>({})
+const localValues = ref<Record<number, string>>({})
+const containerRef = ref<HTMLElement | null>(null)
 
-  // Replace @@ with multi-select checkboxes
-  content = content.replace(/@@/g, () => {
-    const currentNum = questionNum++
-    const isActive = currentNum === props.activeQuestionNumber
-    const activeClass = isActive ? 'bg-blue-50' : ''
-    return `<div class="question-wrapper ${activeClass}" data-question-number="${currentNum}" data-question="${currentNum}" onclick="event.target.closest('.multi-select').dispatchEvent(new CustomEvent('question-click', {detail: ${currentNum}, bubbles: true}))">
-      <span class="question-number">${currentNum}</span>
-      <div class="multi-select-group" data-question="${currentNum}" onclick="event.stopPropagation()">
-        ${props.options
-          .map(
-            (opt) =>
-              `<label class="checkbox-label">
-              <input type="checkbox" value="${opt.value}" class="multi-select-checkbox" data-question="${currentNum}" />
-              <span>${opt.value}</span>
-            </label>`,
-          )
-          .join('')}
-      </div>
-    </div>`
-  })
+// Initialize local values from modelValue
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    if (typeof newValue === 'object' && newValue !== null) {
+      localValues.value = { ...newValue }
+    } else {
+      localValues.value = {}
+    }
+  },
+  { immediate: true, deep: true },
+)
 
-  return content
+// Check if active question is within this multi-select range
+const isActiveRange = computed(() => {
+  const endNumber = props.startNumber + props.limit - 1
+  return props.activeQuestionNumber >= props.startNumber && props.activeQuestionNumber <= endNumber
 })
 
-// Listen for changes on dynamically created checkboxes
-const handleCheckboxChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const questionNum = target.getAttribute('data-question')
-  if (!questionNum) return
-
-  const group = document.querySelector(`.multi-select-group[data-question="${questionNum}"]`)
-  if (!group) return
-
-  const checkboxes = Array.from(
-    group.querySelectorAll('input[type="checkbox"]'),
-  ) as HTMLInputElement[]
-  const selected = checkboxes.filter((cb) => cb.checked).map((cb) => cb.value)
-
-  // Limit selections
-  if (selected.length > props.maxSelections) {
-    target.checked = false
-    return
+// Set container ref - register for all question numbers in range
+const setContainerRef = (el: any) => {
+  if (el) {
+    containerRef.value = el as HTMLElement
+    // Register this element for all question numbers in the range
+    for (let i = 0; i < props.limit; i++) {
+      questionElements.value[props.startNumber + i] = el as HTMLElement
+    }
   }
-
-  const newAnswers = { ...props.modelValue, [questionNum]: selected }
-  emit('update:modelValue', newAnswers)
 }
 
-// Add event listener after mount
-onMounted(() => {
-  const refs: Record<number, HTMLElement> = {}
-  document.querySelectorAll('.question-wrapper').forEach((wrapper) => {
-    const questionNum = wrapper.getAttribute('data-question')
-    if (questionNum) {
-      refs[parseInt(questionNum)] = wrapper as HTMLElement
+// Get current selected values as array
+const getCurrentValuesArray = (): string[] => {
+  return Object.values(localValues.value)
+}
+
+// Check if an option is selected
+const isSelected = (value: string) => {
+  const values = getCurrentValuesArray()
+  return values.includes(value)
+}
+
+// Count of selected options
+const selectedCount = computed(() => {
+  return Object.keys(localValues.value).length
+})
+
+// Handle checkbox change
+const handleCheckboxChange = (value: string) => {
+  const newValues = { ...localValues.value }
+
+  // Find if this value is already selected (find the question number key)
+  const existingKey = Object.keys(newValues).find((key) => newValues[Number(key)] === value)
+
+  if (existingKey) {
+    // Uncheck: remove from selection
+    delete newValues[Number(existingKey)]
+  } else {
+    // Check: add to selection if under limit
+    if (Object.keys(newValues).length < props.limit) {
+      // Find the next available question number in range
+      for (let i = 0; i < props.limit; i++) {
+        const questionNumber = props.startNumber + i
+        if (!newValues[questionNumber]) {
+          newValues[questionNumber] = value
+          break
+        }
+      }
+    } else {
+      // Already at limit, don't add
+      console.log('Limit reached, cannot add more')
+      return
     }
-  })
-  emit('register-refs', refs)
-
-  document.querySelectorAll('.multi-select-checkbox').forEach((checkbox) => {
-    checkbox.addEventListener('change', handleCheckboxChange)
-  })
-
-  // Add question click listener
-  const multiSelectEl = document.querySelector('.multi-select')
-  if (multiSelectEl) {
-    multiSelectEl.addEventListener('question-click', ((e: CustomEvent) => {
-      emit('question-click', e.detail)
-    }) as EventListener)
   }
+
+  console.log('Emitting new values:', newValues)
+  // Update local state immediately for reactivity
+  localValues.value = newValues
+  // Emit the updated value
+  emit('update:modelValue', newValues)
+}
+
+// Register refs on mount
+onMounted(() => {
+  emit('register-refs', questionElements.value)
 })
 </script>
-
-<style scoped>
-.multi-select {
-  margin-bottom: 32px;
-}
-
-.question-header h3 {
-  color: #2563eb;
-  font-size: 1.3rem;
-  margin-bottom: 12px;
-}
-
-.condition {
-  color: #374151;
-  margin-bottom: 16px;
-  font-style: italic;
-}
-
-.options-box {
-  background: #f3f6fd;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.options-box h4 {
-  color: #2563eb;
-  font-size: 1.1rem;
-  margin-bottom: 12px;
-}
-
-.options-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 8px;
-}
-
-.option-item {
-  display: flex;
-  gap: 8px;
-  padding: 8px;
-  background: #fff;
-  border-radius: 6px;
-}
-
-.option-value {
-  font-weight: 600;
-  color: #2563eb;
-}
-
-.option-label {
-  color: #374151;
-}
-
-.content :deep(.question-wrapper) {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 8px 0;
-}
-
-.content :deep(.question-number) {
-  font-weight: 600;
-  color: #2563eb;
-  font-size: 0.9rem;
-  padding-top: 8px;
-}
-
-.content :deep(.multi-select-group) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.content :deep(.checkbox-label) {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: #fff;
-  border: 2px solid #e5e7eb;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.content :deep(.checkbox-label:hover) {
-  border-color: #2563eb;
-  background: #eff6ff;
-}
-
-.content :deep(.checkbox-label input:checked) ~ span {
-  color: #2563eb;
-  font-weight: 600;
-}
-</style>

@@ -1,7 +1,7 @@
 <template>
   <ExamLayout>
     <template #header>
-      <ExamHeader title="Listening" :timer="false"/>
+      <ExamHeader title="Listening" :timer="false" />
     </template>
     <div class="min-w-0 flex-1 overflow-y-auto">
       <div class="h-full flex flex-col">
@@ -83,10 +83,8 @@
                           v-else-if="section.type === 'multi-select'"
                           :title="section.title"
                           :condition="section.condition"
-                          :content="section.content"
                           :options="section.options"
-                          :show-options="section.showOptions"
-                          :options-title="section.optionsTitle"
+                          :limit="section.limit || 3"
                           :start-number="getStartNumber(part.part, index)"
                           :active-question-number="activeGlobalQuestion"
                           v-model="answers[part.id][section.id]"
@@ -471,6 +469,7 @@ onMounted(async () => {
         if (part.question?.content) {
           for (const section of part.question.content) {
             if (!answers.value[part.id][section.id]) {
+              // Initialize all types as object
               answers.value[part.id][section.id] = {}
             }
           }
@@ -651,11 +650,9 @@ const getStartNumber = (partName: string, sectionIndex: number) => {
         const section = currentPart.question.content[i]
         if (section.type === 'multiple-choice') {
           start += section.questions?.length || 0
-        } else if (
-          section.type === 'selection' ||
-          section.type === 'completion' ||
-          section.type === 'multi-select'
-        ) {
+        } else if (section.type === 'multi-select') {
+          start += section.limit || 3
+        } else if (section.type === 'selection' || section.type === 'completion') {
           const matches = section.content?.match(/@@/g)
           start += matches ? matches.length : 0
         }
@@ -723,11 +720,9 @@ const isQuestionAnswered = (globalQuestionNumber: number) => {
       let sectionQuestionCount = 0
       if (section.type === 'multiple-choice') {
         sectionQuestionCount = section.questions?.length || 0
-      } else if (
-        section.type === 'selection' ||
-        section.type === 'completion' ||
-        section.type === 'multi-select'
-      ) {
+      } else if (section.type === 'multi-select') {
+        sectionQuestionCount = section.limit || 3
+      } else if (section.type === 'selection' || section.type === 'completion') {
         const matches = section.content?.match(/@@/g)
         sectionQuestionCount = matches ? matches.length : 0
       }
