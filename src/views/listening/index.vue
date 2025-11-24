@@ -344,6 +344,34 @@
       @loadedmetadata="updateDuration"
       @ended="onAudioEnd"
     ></audio>
+
+    <!-- Full Audio Player (hidden) -->
+    <audio
+      v-if="listeningData?.full_audio_url"
+      ref="fullAudioPlayer"
+      :src="listeningData.full_audio_url"
+      @play="showFullAudioModal = false"
+      @ended="onFullAudioEnded"
+    ></audio>
+
+    <!-- Full Audio Modal -->
+    <Dialog v-model:open="showFullAudioModal">
+      <DialogContent
+        class="max-w-md border-none bg-black/80 backdrop-blur-sm p-0"
+        @interact-outside="(e) => e.preventDefault()"
+        @escape-key-down="(e) => e.preventDefault()"
+      >
+        <div class="flex items-center justify-center h-[300px]">
+          <Button
+            @click="playFullAudio"
+            size="icon"
+            class="h-24 w-24 rounded-full bg-white hover:bg-gray-100 text-black shadow-2xl"
+          >
+            <Play class="h-12 w-12" :fill="'currentColor'" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   </ExamLayout>
 </template>
 
@@ -364,6 +392,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import MultipleChoice from '@/components/listening/MultipleChoice.vue'
 import Selection from '@/components/listening/Selection.vue'
 import Completion from '@/components/listening/Completion.vue'
@@ -449,9 +478,37 @@ const isMuted = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 
+// Full audio modal state
+const showFullAudioModal = ref(true)
+const fullAudioPlayer = ref<HTMLAudioElement | null>(null)
+const isFullAudioPlaying = ref(false)
+
 const progressPercent = computed(() => {
   return duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0
 })
+
+// Full audio controls
+const playFullAudio = () => {
+  if (fullAudioPlayer.value && listeningData.value?.full_audio_url) {
+    fullAudioPlayer.value.play()
+    isFullAudioPlaying.value = true
+    // Modal will hide automatically via @play event
+  }
+}
+
+const toggleFullAudioPlay = () => {
+  if (!fullAudioPlayer.value) return
+  if (isFullAudioPlaying.value) {
+    fullAudioPlayer.value.pause()
+  } else {
+    fullAudioPlayer.value.play()
+  }
+  isFullAudioPlaying.value = !isFullAudioPlaying.value
+}
+
+const onFullAudioEnded = () => {
+  isFullAudioPlaying.value = false
+}
 
 // Fetch listening test data
 onMounted(async () => {
