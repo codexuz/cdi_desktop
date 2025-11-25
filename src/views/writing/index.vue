@@ -242,11 +242,6 @@ const submitAnswers = async () => {
     // Send the entire test_results structure matching API format
     const response = await post('/student/submit-test', { test_results: testResults })
 
-    // If response includes feedback, save it
-    if (response.data?.feedback) {
-      examAnswersStore.setWritingFeedback(response.data.feedback)
-    }
-
     toast.success('Answers submitted successfully!')
   } catch (err: any) {
     error.value = err?.response?.data?.message || 'Failed to submit answers.'

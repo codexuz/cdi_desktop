@@ -842,27 +842,6 @@ const isQuestionAnswered = (globalQuestionNumber: number) => {
   return false
 }
 
-const submitAnswers = async () => {
-  try {
-    // Set submission timestamp
-    examAnswersStore.setSubmittedAt(new Date().toISOString())
-
-    const response = await post('/student/listening/submit', { answers: answers.value })
-
-    // If response includes results, save them
-    if (response.data?.score !== undefined) {
-      examAnswersStore.setListeningResults(
-        response.data.score,
-        response.data.correct || 0,
-        response.data.incorrect || 0,
-      )
-    }
-
-    alert('Answers submitted successfully!')
-  } catch (err: any) {
-    error.value = err?.response?.data?.message || 'Failed to submit answers.'
-  }
-}
 </script>
 
 <style scoped>

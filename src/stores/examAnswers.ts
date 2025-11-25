@@ -5,25 +5,17 @@ interface WritingTaskAnswer {
   task_1_answer?: string
   task_2_answer?: string
   word_count?: number
-  score?: number
 }
 
 interface TestResults {
   listening?: {
     answers: any[] // Array of answers
-    score?: number
-    correct?: number
-    incorrect?: number
   }
   reading?: {
     answers: any[] // Array of answers
-    score?: number
-    correct?: number
-    incorrect?: number
   }
   writing?: {
     answers: WritingTaskAnswer[]
-    feedback?: string
   }
   submitted_at?: string
   total_time_spent?: number
@@ -87,15 +79,6 @@ export const useExamAnswersStore = defineStore('examAnswers', () => {
     testResults.value.listening.answers[index] = value
   }
 
-  const setListeningResults = (score: number, correct: number, incorrect: number) => {
-    if (!testResults.value.listening) {
-      testResults.value.listening = { answers: [] }
-    }
-    testResults.value.listening.score = score
-    testResults.value.listening.correct = correct
-    testResults.value.listening.incorrect = incorrect
-  }
-
   // Reading answers
   const setReadingAnswers = (answers: Record<string, any> | any[]) => {
     if (!testResults.value.reading) {
@@ -125,15 +108,6 @@ export const useExamAnswersStore = defineStore('examAnswers', () => {
     testResults.value.reading.answers[index] = value
   }
 
-  const setReadingResults = (score: number, correct: number, incorrect: number) => {
-    if (!testResults.value.reading) {
-      testResults.value.reading = { answers: [] }
-    }
-    testResults.value.reading.score = score
-    testResults.value.reading.correct = correct
-    testResults.value.reading.incorrect = incorrect
-  }
-
   // Writing answers
   const setWritingAnswers = (answers: WritingTaskAnswer[]) => {
     if (!testResults.value.writing) {
@@ -154,13 +128,6 @@ export const useExamAnswersStore = defineStore('examAnswers', () => {
       testResults.value.writing.answers = []
     }
     testResults.value.writing.answers[taskIndex] = answer
-  }
-
-  const setWritingFeedback = (feedback: string) => {
-    if (!testResults.value.writing) {
-      testResults.value.writing = { answers: [] }
-    }
-    testResults.value.writing.feedback = feedback
   }
 
   // General metadata
@@ -202,17 +169,14 @@ export const useExamAnswersStore = defineStore('examAnswers', () => {
     setListeningAnswers,
     getListeningAnswers,
     updateListeningAnswer,
-    setListeningResults,
     // Reading
     setReadingAnswers,
     getReadingAnswers,
     updateReadingAnswer,
-    setReadingResults,
     // Writing
     setWritingAnswers,
     getWritingAnswers,
     updateWritingTask,
-    setWritingFeedback,
     // Metadata
     setSubmittedAt,
     setTotalTimeSpent,
