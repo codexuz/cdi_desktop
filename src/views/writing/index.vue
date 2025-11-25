@@ -253,10 +253,9 @@ const submitAnswers = async () => {
 const cleanup = async () => {
   // Stop the timer
   timerStore.stop()
-  await submitAnswers()
   // Clear timer from localStorage
   timerStore.clear()
-
+  await submitAnswers()
   // Clear all exam answers from localStorage
   examAnswersStore.clearAllAnswers()
 }

@@ -13,11 +13,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { useTimerStore } from '@/stores/timer'
+import { useTestStatusStore } from '@/stores/testStatus'
 import { useRouter, useRoute } from 'vue-router'
 
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
 const timerStore = useTimerStore()
+const testStatusStore = useTestStatusStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -54,17 +56,8 @@ const testId = computed(() => route.params.id as string)
 
 // Determine next route based on current exam type
 const getNextRoute = () => {
-  const currentType = examType.value
   const id = testId.value
-
-  if (currentType === 'listening') {
-    return `/reading/${id}`
-  } else if (currentType === 'reading') {
-    return `/writing/${id}`
-  } else if (currentType === 'writing') {
-    return '/' // Go to home after writing (will submit in component)
-  }
-  return '/'
+  return `/tests/dashboard?test_id=${id}`
 }
 
 // Watch for timer expiration (only for reading and writing)
@@ -91,6 +84,16 @@ const handleFinish = async () => {
     } catch (error) {
       console.error('Error in onFinish callback:', error)
     }
+  }
+
+  // Update test status to completed based on current exam type
+  const currentType = examType.value
+  if (currentType === 'listening') {
+    testStatusStore.completeListening()
+  } else if (currentType === 'reading') {
+    testStatusStore.completeReading()
+  } else if (currentType === 'writing') {
+    testStatusStore.completeWriting()
   }
 
   // Emit finish event to parent component

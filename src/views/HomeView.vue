@@ -1,29 +1,60 @@
 <template>
-  <div class="wrap">
-    <div class="top-bar">
-      <div class="logo">Mockmee</div>
-      <div class="candidate-info text-sm">
+  <div
+    class="min-h-screen bg-linear-to-br from-blue-600 to-blue-800 dark:from-slate-900 dark:to-slate-800"
+  >
+    <div
+      class="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-white/20 dark:border-slate-700/50 px-8 py-4 flex justify-between items-center shadow-lg"
+    >
+      <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">Mockmee</div>
+      <div class="flex items-center gap-4 text-sm">
         <div>
-          <p>{{ 'Candidate ID: ' + candidateId }}</p>
-          <p>{{ 'Center: ' + (testData?.center?.name || 'N/A') }}</p>
+          <p class="text-gray-700 dark:text-slate-300">{{ 'Candidate ID: ' + candidateId }}</p>
+          <p class="text-gray-700 dark:text-slate-300">
+            {{ 'Center: ' + (testData?.center?.name || 'N/A') }}
+          </p>
         </div>
-        <button class="logout-btn" @click="logout">Logout</button>
+        <button
+          @click="toggleTheme"
+          class="p-2 rounded-full border-2 border-blue-600 dark:border-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all"
+          title="Toggle theme"
+        >
+          <Sun v-if="isDark" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <Moon v-else class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        </button>
+        <button
+          class="bg-linear-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white px-6 py-2 rounded-full font-semibold transition-all hover:-translate-y-0.5 hover:shadow-xl shadow-blue-500/30"
+          @click="logout"
+        >
+          Logout
+        </button>
       </div>
     </div>
 
-    <div class="container">
-      <h1>IELTS Mock Exam</h1>
+    <div class="max-w-7xl mx-auto px-8 py-8">
+      <h1 class="text-center text-white dark:text-slate-100 text-5xl font-extrabold mb-8">
+        IELTS Mock Exam
+      </h1>
 
-      <div v-if="isLoading" class="loading">
-        <p>Loading assignment data...</p>
+      <div
+        v-if="isLoading"
+        class="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-3xl px-12 py-12 text-center shadow-2xl border border-white/20 dark:border-slate-700/50"
+      >
+        <p class="text-xl text-gray-600 dark:text-slate-300">Loading assignment data...</p>
       </div>
-      <div v-else-if="error" class="error">
-        <p>{{ error }}</p>
+      <div
+        v-else-if="error"
+        class="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-3xl px-12 py-12 text-center shadow-2xl border border-white/20 dark:border-slate-700/50"
+      >
+        <p class="text-xl text-gray-600 dark:text-slate-300">{{ error }}</p>
       </div>
 
-      <div v-else class="tests">
-        <div v-if="tests.length === 0" class="no-tests">
-          <p>
+      <div v-else class="grid gap-8">
+        <div
+          v-if="tests.length === 0"
+          class="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-3xl px-12 py-12 text-center shadow-2xl border border-white/20 dark:border-slate-700/50"
+        >
+          <div class="text-5xl mb-4">📝</div>
+          <p class="text-xl text-gray-600 dark:text-slate-300">
             No tests available at the moment. Please check back later or contact your administrator.
           </p>
         </div>
@@ -32,27 +63,41 @@
           v-else
           v-for="test in tests"
           :key="test.id"
-          class="one-test"
+          class="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-3xl px-8 py-8 shadow-2xl border border-white/20 dark:border-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-3xl relative overflow-hidden"
           :class="{
-            completed: testData?.status === 'completed',
-            in_progress: testData?.status === 'in_progress',
+            'border-2 !border-green-500 dark:!border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20':
+              testData?.status === 'completed',
+            'border-2 !border-amber-500 dark:!border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20':
+              testData?.status === 'in_progress',
           }"
           :data-test-id="test.id"
         >
-          <div class="test-header">
-            <h4 class="test-name">{{ test.name }} - {{ test.title }}</h4>
+          <div class="mb-6">
+            <h4
+              class="text-3xl font-bold text-gray-900 dark:text-slate-100 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-400 dark:to-blue-600 bg-clip-text text-transparent"
+            >
+              {{ test.name }} - {{ test.title }}
+            </h4>
           </div>
-          <div class="timing-info">
+          <div class="flex items-center mb-4 text-lg text-gray-600 dark:text-slate-400 font-medium">
+            <span class="text-xl mr-2">⏱️</span>
             <span
-              >Timing: <span class="timing">{{ test.timing }}</span></span
+              >Timing:
+              <span class="text-blue-600 dark:text-blue-400 font-bold ml-1">{{
+                test.timing
+              }}</span></span
             >
           </div>
-          <div class="test-description">
-            <p>{{ test.description }}</p>
+          <div class="mb-8">
+            <p class="text-gray-700 dark:text-slate-300 leading-relaxed">{{ test.description }}</p>
           </div>
           <button
-            class="start-test"
-            :class="{ 'completed-btn': testData?.status === 'completed' }"
+            class="px-8 py-4 rounded-full font-semibold text-lg transition-all relative overflow-hidden shadow-lg"
+            :class="
+              testData?.status === 'completed'
+                ? 'bg-linear-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 text-white shadow-green-500/30 cursor-not-allowed'
+                : 'bg-linear-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white shadow-blue-500/30 hover:-translate-y-0.5 hover:shadow-xl'
+            "
             @click="handleTestAction(test.id)"
             :disabled="testData?.status === 'completed'"
           >
@@ -62,22 +107,33 @@
       </div>
     </div>
     <div
-      class="logout-modal"
-      :class="{ show: showLogoutModal }"
+      class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex justify-center items-center z-[1000] transition-all"
+      :class="showLogoutModal ? 'opacity-100 visible' : 'opacity-0 invisible'"
       :style="{ display: showLogoutModal ? 'flex' : 'none' }"
       @click="hideLogoutModalOnBackdrop"
     >
-      <div class="logout-modal-content">
-        <h2>Confirm Logout</h2>
-        <p>
+      <div
+        class="bg-white dark:bg-slate-800 rounded-3xl px-8 py-8 max-w-md w-11/12 shadow-2xl transition-transform"
+        :class="showLogoutModal ? 'scale-100' : 'scale-90'"
+      >
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4 text-center">
+          Confirm Logout
+        </h2>
+        <p class="text-gray-600 dark:text-slate-400 leading-relaxed mb-8 text-center">
           Are you sure you want to logout? This will clear all your test progress and you'll need to
           login again.
         </p>
-        <div class="logout-modal-buttons">
-          <button class="logout-modal-btn logout-confirm-btn" @click="performLogout">
+        <div class="flex gap-4 justify-center">
+          <button
+            class="flex-1 px-6 py-3 rounded-full font-semibold transition-all bg-linear-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white shadow-lg shadow-blue-500/30 hover:-translate-y-0.5 hover:shadow-xl"
+            @click="performLogout"
+          >
             Yes, Logout
           </button>
-          <button class="logout-modal-btn logout-cancel-btn" @click="hideLogoutModal">
+          <button
+            class="flex-1 px-6 py-3 rounded-full font-semibold transition-all bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 border-2 border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 hover:-translate-y-0.5"
+            @click="hideLogoutModal"
+          >
             Cancel
           </button>
         </div>
@@ -90,6 +146,9 @@
 import { ref, reactive, onMounted, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { get, post, removeAccessToken } from '@/utils/api'
+import { useDark, useToggle } from '@vueuse/core'
+import { Sun, Moon } from 'lucide-vue-next'
+import { useTestStatusStore } from '@/stores/testStatus'
 
 interface TestItem {
   id: string
@@ -167,12 +226,21 @@ interface TestData {
 
 // Reactive state
 const router = useRouter()
+const testStatusStore = useTestStatusStore()
 const candidateId = ref('')
 const testData = ref<TestData | null>(null)
 const currentDate = ref('')
 const showLogoutModal = ref(false)
 const isLoading = ref(true)
 const error = ref('')
+
+// Dark mode
+const isDark = useDark()
+const toggleDark = useToggle(isDark)
+
+const toggleTheme = () => {
+  toggleDark()
+}
 
 // Generate tests data from fetched data
 const tests = computed(() => {
@@ -223,12 +291,14 @@ const performLogout = async () => {
   try {
     // Call the logout endpoint
     await post('/auth/logout')
+    testStatusStore.resetAllTests()
     removeAccessToken()
     // Redirect to login
     router.push('/login')
   } catch (error) {
     console.error('Logout error:', error)
     // Still logout locally
+    testStatusStore.resetAllTests()
     removeAccessToken()
     router.push('/login')
   }
@@ -254,7 +324,7 @@ const startTest = async (testId: string) => {
 
     console.log('Test started successfully:', response.data)
     // Redirect to the test page or update status
-    router.push(`/listening/${testId}`)
+    router.push(`/tests/dashboard?test_id=${testId}`)
   } catch (error) {
     console.error('Error starting test:', error)
     alert('Failed to start test. Please try again.')
@@ -277,9 +347,9 @@ const getButtonText = () => {
     case 'completed':
       return '✓ Test Completed'
     case 'in_progress':
-      return '▶ Continue Test'
+      return 'Continue Test'
     default:
-      return '→ Start Test'
+      return 'Start Test'
   }
 }
 
@@ -328,412 +398,3 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
 })
 </script>
-
-<style scoped>
-.wrap {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  font-family:
-    'Poppins',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    'Roboto',
-    'Oxygen',
-    'Ubuntu',
-    'Cantarell',
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-}
-
-.top-bar {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
-}
-
-.logo {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #2563eb;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.candidate-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.logout-btn {
-  background: linear-gradient(135deg, #258beb 0%, #2563eb 100%);
-  color: white;
-  border: none;
-  padding: 0.5rem 1.5rem;
-  border-radius: 25px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-}
-
-.logout-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.container h1 {
-  text-align: center;
-  color: white;
-  font-size: 3rem;
-  font-weight: 800;
-  margin-bottom: 1rem;
-}
-
-.date {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.date p {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #374151;
-  font-weight: 600;
-}
-
-.date span {
-  color: #2563eb;
-  font-weight: 700;
-}
-
-.date hr {
-  border: none;
-  height: 2px;
-  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
-  margin: 1rem 0;
-}
-
-.tests {
-  display: grid;
-  gap: 2rem;
-}
-
-.one-test {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.one-test:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
-}
-
-.test-header {
-  margin-bottom: 1.5rem;
-}
-
-.test-name {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0 0 0.5rem 0;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.timing-info {
-  display: flex;
-  align-items: center;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.timing-info::before {
-  content: '⏱️';
-  margin-right: 0.5rem;
-  font-size: 1.2rem;
-}
-
-.timing {
-  color: #2563eb;
-  font-weight: 700;
-  margin-left: 0.25rem;
-}
-
-.test-description {
-  margin-bottom: 2rem;
-}
-
-.test-description p {
-  color: #4b5563;
-  line-height: 1.6;
-  font-size: 1rem;
-  margin: 0;
-}
-
-.start-test {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color: white;
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: 30px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.start-test::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.start-test:hover::before {
-  left: 100%;
-}
-
-.start-test:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 35px rgba(37, 99, 235, 0.4);
-}
-
-.start-test.completed-btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
-  cursor: not-allowed;
-}
-
-.start-test.completed-btn:hover {
-  transform: none;
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
-}
-
-.one-test.completed {
-  border: 2px solid #10b981;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-}
-
-.one-test.completed::before {
-  background: linear-gradient(90deg, #10b981 0%, #059669 50%, #047857 100%);
-}
-
-.one-test.in_progress {
-  border: 2px solid #f59e0b;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-}
-
-.one-test.in_progress::before {
-  background: linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
-}
-
-.no-tests {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 3rem;
-  text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.no-tests p {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #6b7280;
-  font-style: normal;
-}
-
-.no-tests::before {
-  content: '📝';
-  font-size: 3rem;
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.loading,
-.error {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 3rem;
-  text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.loading p,
-.error p {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #6b7280;
-}
-
-/* Logout Modal */
-.logout-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(5px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease;
-}
-
-.logout-modal.show {
-  opacity: 1;
-  visibility: visible;
-}
-
-.logout-modal-content {
-  background: white;
-  border-radius: 20px;
-  padding: 2rem;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
-  transform: scale(0.9);
-  transition: transform 0.3s ease;
-}
-
-.logout-modal.show .logout-modal-content {
-  transform: scale(1);
-}
-
-.logout-modal-content h2 {
-  margin: 0 0 1rem 0;
-  color: #1f2937;
-  font-size: 1.5rem;
-  text-align: center;
-}
-
-.logout-modal-content p {
-  color: #6b7280;
-  line-height: 1.6;
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.logout-modal-buttons {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
-
-.logout-modal-btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 25px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  flex: 1;
-}
-
-.logout-confirm-btn {
-  background: linear-gradient(135deg, #258beb 0%, #2563eb 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-}
-
-.logout-confirm-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-}
-
-.logout-cancel-btn {
-  background: #f3f4f6;
-  color: #374151;
-  border: 2px solid #e5e7eb;
-}
-
-.logout-cancel-btn:hover {
-  background: #e5e7eb;
-  transform: translateY(-2px);
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .container {
-    padding: 1rem;
-  }
-
-  .container h1 {
-    font-size: 2rem;
-  }
-
-  .top-bar {
-    padding: 1rem;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .candidate-info {
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-start;
-  }
-
-  .one-test {
-    padding: 1.5rem;
-  }
-
-  .test-name {
-    font-size: 1.5rem;
-  }
-
-  .logout-modal-content {
-    padding: 1.5rem;
-  }
-
-  .logout-modal-buttons {
-    flex-direction: column;
-  }
-}
-</style>
