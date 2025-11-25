@@ -33,7 +33,7 @@ const router = createRouter({
     {
       path: '/tests/dashboard',
       name: 'tests-dashboard',
-      component: () => import('../views/tests/Dashboard.vue'),
+      component: () => import('../views/tests/dashboard.vue'),
     }
   ],
 })
