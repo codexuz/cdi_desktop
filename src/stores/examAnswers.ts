@@ -9,10 +9,10 @@ interface WritingTaskAnswer {
 
 interface TestResults {
   listening?: {
-    answers: any[] // Array of answers
+    answers: Record<string, Array<Record<string, any>>> // Object with part IDs as keys
   }
   reading?: {
-    answers: any[] // Array of answers
+    answers: Record<string, Array<Record<string, any>>> // Object with part IDs as keys
   }
   writing?: {
     answers: WritingTaskAnswer[]
@@ -51,61 +51,59 @@ export const useExamAnswersStore = defineStore('examAnswers', () => {
   )
 
   // Listening answers
-  const setListeningAnswers = (answers: Record<string, any> | any[]) => {
+  const setListeningAnswers = (answers: Record<string, any>) => {
     if (!testResults.value.listening) {
-      testResults.value.listening = { answers: [] }
+      testResults.value.listening = { answers: {} }
     }
-    // Convert object to array if needed
-    if (Array.isArray(answers)) {
-      testResults.value.listening.answers = answers
-    } else {
-      // Keep object format for backward compatibility during test
-      testResults.value.listening.answers = answers as any
-    }
+    testResults.value.listening.answers = answers
   }
 
   const getListeningAnswers = () => {
-    return testResults.value.listening?.answers || []
+    return testResults.value.listening?.answers || {}
   }
 
-  const updateListeningAnswer = (key: string | number, value: any) => {
+  const updateListeningAnswer = (partId: string, questionNum: string, value: any) => {
     if (!testResults.value.listening) {
-      testResults.value.listening = { answers: [] }
+      testResults.value.listening = { answers: {} }
     }
-    if (!Array.isArray(testResults.value.listening.answers)) {
-      testResults.value.listening.answers = []
+    if (!testResults.value.listening.answers) {
+      testResults.value.listening.answers = {}
     }
-    const index = typeof key === 'string' ? parseInt(key) : key
-    testResults.value.listening.answers[index] = value
+    if (!testResults.value.listening.answers[partId]) {
+      testResults.value.listening.answers[partId] = [{}]
+    }
+    const partAnswers = testResults.value.listening.answers[partId]
+    if (partAnswers && partAnswers[0]) {
+      partAnswers[0][questionNum] = value
+    }
   }
 
   // Reading answers
-  const setReadingAnswers = (answers: Record<string, any> | any[]) => {
+  const setReadingAnswers = (answers: Record<string, any>) => {
     if (!testResults.value.reading) {
-      testResults.value.reading = { answers: [] }
+      testResults.value.reading = { answers: {} }
     }
-    // Convert object to array if needed
-    if (Array.isArray(answers)) {
-      testResults.value.reading.answers = answers
-    } else {
-      // Keep object format for backward compatibility during test
-      testResults.value.reading.answers = answers as any
-    }
+    testResults.value.reading.answers = answers
   }
 
   const getReadingAnswers = () => {
-    return testResults.value.reading?.answers || []
+    return testResults.value.reading?.answers || {}
   }
 
-  const updateReadingAnswer = (key: string | number, value: any) => {
+  const updateReadingAnswer = (partId: string, questionNum: string, value: any) => {
     if (!testResults.value.reading) {
-      testResults.value.reading = { answers: [] }
+      testResults.value.reading = { answers: {} }
     }
-    if (!Array.isArray(testResults.value.reading.answers)) {
-      testResults.value.reading.answers = []
+    if (!testResults.value.reading.answers) {
+      testResults.value.reading.answers = {}
     }
-    const index = typeof key === 'string' ? parseInt(key) : key
-    testResults.value.reading.answers[index] = value
+    if (!testResults.value.reading.answers[partId]) {
+      testResults.value.reading.answers[partId] = [{}]
+    }
+    const partAnswers = testResults.value.reading.answers[partId]
+    if (partAnswers && partAnswers[0]) {
+      partAnswers[0][questionNum] = value
+    }
   }
 
   // Writing answers

@@ -591,7 +591,54 @@ watch([activePart, activeQuestion], ([newPart, newQuestion]) => {
 watch(
   answers,
   (newAnswers) => {
-    examAnswersStore.setListeningAnswers(newAnswers)
+    // Transform answers to the new structure: { partId: [{ questionNum: answer }] }
+    const transformedAnswers = {}
+
+    if (listeningData.value?.parts) {
+      for (const part of listeningData.value.parts) {
+        const partAnswers = {}
+        let questionCounter = getStartNumber(part.part, 0)
+
+        if (part.question?.content) {
+          for (const section of part.question.content) {
+            const sectionAnswers = newAnswers[part.id]?.[section.id] || {}
+
+            // Map section answers to global question numbers
+            if (section.type === 'multiple-choice' && section.questions) {
+              section.questions.forEach((q: any, index: number) => {
+                const answer = sectionAnswers[q.id]
+                if (answer !== undefined && answer !== null && answer !== '') {
+                  partAnswers[(questionCounter + index).toString()] = answer
+                }
+              })
+              questionCounter += section.questions.length
+            } else {
+              // For completion, selection, multi-select
+              Object.keys(sectionAnswers).forEach((key) => {
+                const answer = sectionAnswers[key]
+                if (answer !== undefined && answer !== null && answer !== '') {
+                  partAnswers[key] = answer
+                }
+              })
+
+              // Count questions
+              if (
+                section.type === 'completion' ||
+                section.type === 'selection' ||
+                section.type === 'multi-select'
+              ) {
+                const matches = section.content?.match(/@@/g)
+                questionCounter += matches ? matches.length : 0
+              }
+            }
+          }
+        }
+
+        transformedAnswers[part.id] = [partAnswers]
+      }
+    }
+
+    examAnswersStore.setListeningAnswers(transformedAnswers)
   },
   { deep: true },
 )
@@ -841,7 +888,6 @@ const isQuestionAnswered = (globalQuestionNumber: number) => {
 
   return false
 }
-
 </script>
 
 <style scoped>

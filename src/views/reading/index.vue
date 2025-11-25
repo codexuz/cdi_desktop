@@ -96,7 +96,48 @@ onUnmounted(() => {
 watch(
   answers,
   (newAnswers) => {
-    examAnswersStore.setReadingAnswers(newAnswers)
+    // Transform answers to the new structure: { partId: [{ questionNum: answer }] }
+    const transformedAnswers = {}
+
+    if (readingData.value?.parts) {
+      for (const part of readingData.value.parts) {
+        const partAnswers = {}
+        let questionCounter = 1
+
+        // Calculate starting question number for this part
+        const partNum = parseInt(part.part.split('_')[1])
+        for (let i = 1; i < partNum; i++) {
+          questionCounter += getPartQuestionCount(i)
+        }
+
+        if (part.question?.content) {
+          for (const section of part.question.content) {
+            const sectionAnswers = newAnswers[section.id] || []
+
+            if (Array.isArray(sectionAnswers)) {
+              sectionAnswers.forEach((answer, index) => {
+                if (
+                  answer !== undefined &&
+                  answer !== null &&
+                  answer !== '' &&
+                  answer.toString().trim() !== ''
+                ) {
+                  partAnswers[(questionCounter + index).toString()] = answer
+                }
+              })
+            }
+
+            // Count questions in this section
+            const sectionQuestionCount = getSectionQuestionCount(section)
+            questionCounter += sectionQuestionCount
+          }
+        }
+
+        transformedAnswers[part.id] = [partAnswers]
+      }
+    }
+
+    examAnswersStore.setReadingAnswers(transformedAnswers)
   },
   { deep: true },
 )
