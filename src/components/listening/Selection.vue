@@ -3,6 +3,9 @@
     <div class="mb-4">
       <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3">{{ title }}</h3>
       <div v-if="condition" class="text-gray-600 dark:text-gray-400 mb-4" v-html="condition"></div>
+
+      <!-- Image from content if exists -->
+      <div v-if="contentImage" class="mb-4 max-w-md" v-html="contentImage"></div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -121,9 +124,18 @@ const draggedOption = ref<string | null>(null)
 const dragOverQuestion = ref<number | null>(null)
 const questionElements = ref<Record<number, HTMLElement>>({})
 
-// Parse content to extract questions
+// Extract image/figure tags from content
+const contentImage = computed(() => {
+  const figureMatch = props.content.match(/<figure[^>]*>.*?<\/figure>/i)
+  return figureMatch ? figureMatch[0] : ''
+})
+
+// Parse content to extract questions (excluding images)
 const questions = computed(() => {
-  const lines = props.content
+  // Remove figure tags first
+  let cleanContent = props.content.replace(/<figure[^>]*>.*?<\/figure>/gi, '')
+
+  const lines = cleanContent
     .replace(/<p>/g, '')
     .split('</p>')
     .filter((line) => line.trim() && line.includes('@@'))
@@ -260,5 +272,16 @@ onMounted(() => {
   outline: none;
   border-color: #1d4ed8;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Image styling */
+:deep(figure) {
+  margin: 0;
+}
+
+:deep(figure img) {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 </style>
