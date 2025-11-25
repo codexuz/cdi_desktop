@@ -12,7 +12,7 @@
       <!-- Left Column: Drop Areas (Fossil categories) -->
       <div>
         <h4 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 border-b pb-2">
-          Fossil categories
+         Questions
         </h4>
         <div class="space-y-3">
           <div
