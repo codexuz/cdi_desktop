@@ -29,6 +29,7 @@ import {
 import SelectionQuestion from '@/components/reading/SelectionQuestion.vue'
 import CompletionQuestion from '@/components/reading/CompletionQuestion.vue'
 import MultipleChoiceQuestion from '@/components/reading/MultipleChoiceQuestion.vue'
+import DraggableSelectionQuestion from '@/components/reading/DraggableSelectionQuestion.vue'
 import { useExamAnswersStore } from '@/stores/examAnswers'
 import { useTimerStore } from '@/stores/timer'
 import { useRouter } from 'vue-router'
@@ -248,7 +249,11 @@ const getStartingQuestionNumber = computed(() => {
 
 // Get the number of questions in a section (counting @@ markers or questions array)
 const getSectionQuestionCount = (section) => {
-  if (section.type === 'selection' || section.type === 'completion') {
+  if (
+    section.type === 'selection' ||
+    section.type === 'completion' ||
+    section.type === 'draggable-selection'
+  ) {
     // Count @@ markers in content
     const matches = section.content.match(/@@/g)
     return matches ? matches.length : 0
@@ -464,6 +469,16 @@ const highlightText = () => {
                       <!-- Multiple Choice Questions -->
                       <MultipleChoiceQuestion
                         v-if="section.type === 'multiple-choice'"
+                        :question="section"
+                        :starting-question-number="getSectionStartingQuestionNumber(index)"
+                        :active-question-number="activeGlobalQuestion"
+                        v-model="answers[section.id]"
+                        @question-click="setActiveQuestionByGlobalNumber"
+                      />
+
+                      <!-- Draggable Selection Questions -->
+                      <DraggableSelectionQuestion
+                        v-if="section.type === 'draggable-selection'"
                         :question="section"
                         :starting-question-number="getSectionStartingQuestionNumber(index)"
                         :active-question-number="activeGlobalQuestion"
