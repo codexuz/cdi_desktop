@@ -35,6 +35,18 @@
       <div class="footer-text">
         Please ensure you have your Candidate ID ready before proceeding.
       </div>
+
+      <div class="powered-by">
+        Powered by
+        <a
+          href="https://www.instagram.com/impulsestudy_lc"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="impulse-link"
+        >
+          Impulse Study
+        </a>
+      </div>
     </div>
   </div>
 </template>
@@ -151,6 +163,7 @@ const onSubmit = async () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  line-height: 35px;
 }
 
 .platform-subtitle {
@@ -243,6 +256,28 @@ const onSubmit = async () => {
   margin-top: 30px;
   color: #6b7280;
   font-size: 14px;
+}
+
+.powered-by {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+}
+
+.impulse-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 4px;
+  transition: all 0.3s ease;
+}
+
+.impulse-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 .error-message {
