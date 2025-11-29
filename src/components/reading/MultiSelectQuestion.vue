@@ -1,203 +1,182 @@
 <template>
-  <div class="multi-select-question bg-white rounded-lg p-6 shadow-md">
-    <!-- Title -->
-    <h3 v-if="question.title" class="text-xl font-bold mb-4 text-gray-800">
-      {{ question.title }}
-    </h3>
-    
-    <!-- Condition/Instructions -->
+  <div class="mb-8">
+    <div class="mb-4">
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3">{{ title }}</h3>
+      <div v-if="condition" class="text-gray-600 dark:text-gray-400 mb-4" v-html="condition"></div>
+    </div>
+
+    <!-- This is multi-select spanning multiple question numbers -->
     <div
-      v-if="question.condition"
-      class="instructions mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded"
-      v-html="question.condition"
-    />
-    
-    <!-- Selection Limit Info -->
-    <div v-if="question.limit" class="limit-info mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-      <span class="text-yellow-800 font-medium">
-        📌 Select exactly {{ question.limit }} option{{ question.limit > 1 ? 's' : '' }}
-        <span v-if="selectedCount > 0" class="ml-2">
-          ({{ selectedCount }}/{{ question.limit }} selected)
+      :ref="setContainerRef"
+      class="grid w-[60%] gap-3 mt-4 p-3 rounded transition-colors"
+      :class="isActiveRange ? 'bg-gray-100 dark:bg-blue-900/20' : ''"
+    >
+      <div class="flex gap-2 mb-2">
+        <span
+          v-for="i in limit"
+          :key="i"
+          class="inline-block min-w-[30px] h-6 text-slate-800 dark:text-slate-400 font-bold text-center leading-5 text-sm cursor-pointer"
+          :class="
+            activeQuestionNumber === startNumber + i - 1 ? 'bg-blue-500 text-white rounded' : ''
+          "
+          @click="emit('question-click', startNumber + i - 1)"
+        >
+          {{ startNumber + i - 1 }}
         </span>
-      </span>
-    </div>
-    
-    <!-- Options -->
-    <div class="options space-y-3">
-      <div
-        v-for="option in question.options"
+      </div>
+
+      <label
+        v-for="option in options"
         :key="option.id"
-        class="option-item"
+        class="flex items-center gap-3 px-4 py-3"
+        :class="
+          !isSelected(option.value) && selectedCount >= limit
+            ? 'opacity-50 cursor-not-allowed'
+            : 'cursor-pointer'
+        "
+        @click.stop
       >
-        <label
-          class="flex items-start space-x-3 p-4 rounded-lg cursor-pointer border transition-all duration-200"
-          :class="{
-            'bg-blue-100 border-blue-300 shadow-sm': selectedAnswers.includes(option.value),
-            'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300': !selectedAnswers.includes(option.value),
-            'opacity-50 cursor-not-allowed': isOptionDisabled(option.value)
-          }"
-        >
-          <input
-            type="checkbox"
-            :value="option.value"
-            :checked="selectedAnswers.includes(option.value)"
-            :disabled="isOptionDisabled(option.value)"
-            @change="updateAnswer(option.value, $event)"
-            class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
-          />
-          <div class="flex-1">
-            <span class="font-semibold text-blue-600 mr-2">{{ option.value }}</span>
-            <span class="text-gray-700 leading-relaxed">{{ option.label }}</span>
-          </div>
-        </label>
-      </div>
-    </div>
-    
-    <!-- Validation Message -->
-    <div v-if="validationMessage" class="mt-4 p-3 rounded-lg" :class="validationClass">
-      <span class="text-sm font-medium">{{ validationMessage }}</span>
-    </div>
-    
-    <!-- Answer Summary -->
-    <div v-if="showAnswers" class="mt-6 p-4 bg-gray-50 rounded-lg">
-      <h4 class="font-semibold mb-3">Your Selected Answers:</h4>
-      <div v-if="selectedAnswers.length > 0" class="flex flex-wrap gap-2">
-        <div
-          v-for="answer in selectedAnswers"
-          :key="answer"
-          class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-        >
-          {{ answer }}
-        </div>
-      </div>
-      <p v-else class="text-gray-500 italic">No options selected</p>
+        <input
+          type="checkbox"
+          :value="option.value"
+          :checked="isSelected(option.value)"
+          :disabled="!isSelected(option.value) && selectedCount >= limit"
+          @change="handleCheckboxChange(option.value)"
+          class="w-4 h-4 accent-blue-600"
+          :class="
+            !isSelected(option.value) && selectedCount >= limit
+              ? 'cursor-not-allowed'
+              : 'cursor-pointer'
+          "
+        />
+        <span class="font-semibold text-slate-600 dark:text-slate-200 text-base min-w-6">
+          {{ option.value }}
+        </span>
+        <span class="text-gray-700 dark:text-gray-300 flex-1">{{ option.label }}</span>
+      </label>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-interface MultiSelectOption {
-  id: string;
-  value: string;
-  label: string;
-}
+import { computed, ref, watch, onMounted } from 'vue'
 
-interface MultiSelectQuestion {
-  id: string;
-  type: 'multi-select';
-  title?: string;
-  condition?: string;
-  options: MultiSelectOption[];
-  limit?: number;
+interface Option {
+  id: string
+  value: string
+  label: string
 }
 
 interface Props {
-  question: MultiSelectQuestion;
-  modelValue?: string[];
-  showAnswers?: boolean;
-}
-
-interface Emits {
-  (e: 'update:modelValue', value: string[]): void;
+  title: string
+  condition?: string
+  options: Option[]
+  startNumber: number
+  limit: number
+  modelValue?: Record<number, string>
+  activeQuestionNumber?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: () => [],
-  showAnswers: false,
-});
+  condition: '',
+  limit: 3,
+  modelValue: () => ({}),
+  activeQuestionNumber: 0,
+})
 
-const emit = defineEmits<Emits>();
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: Record<number, string>): void
+  (e: 'register-refs', refs: Record<number, HTMLElement>): void
+  (e: 'question-click', questionNumber: number): void
+}>()
 
-const selectedAnswers = ref<string[]>(props.modelValue || []);
+const questionElements = ref<Record<number, HTMLElement>>({})
+const localValues = ref<Record<number, string>>({})
+const containerRef = ref<HTMLElement | null>(null)
 
-const selectedCount = computed(() => selectedAnswers.value.length);
-
-const validationMessage = computed(() => {
-  if (!props.question.limit) return '';
-  
-  const limit = props.question.limit;
-  const count = selectedCount.value;
-  
-  if (count === 0) {
-    return `Please select ${limit} option${limit > 1 ? 's' : ''}`;
-  } else if (count < limit) {
-    return `Select ${limit - count} more option${limit - count > 1 ? 's' : ''}`;
-  } else if (count > limit) {
-    return `Too many options selected. Please deselect ${count - limit} option${count - limit > 1 ? 's' : ''}`;
-  } else {
-    return `Perfect! You have selected ${limit} option${limit > 1 ? 's' : ''}`;
-  }
-});
-
-const validationClass = computed(() => {
-  if (!props.question.limit) return '';
-  
-  const limit = props.question.limit;
-  const count = selectedCount.value;
-  
-  if (count === limit) {
-    return 'bg-green-50 border border-green-200 text-green-800';
-  } else if (count > limit) {
-    return 'bg-red-50 border border-red-200 text-red-800';
-  } else {
-    return 'bg-blue-50 border border-blue-200 text-blue-800';
-  }
-});
-
-const isOptionDisabled = (value: string): boolean => {
-  if (!props.question.limit) return false;
-  
-  const isSelected = selectedAnswers.value.includes(value);
-  const hasReachedLimit = selectedCount.value >= props.question.limit;
-  
-  // Disable if limit is reached and this option is not already selected
-  return hasReachedLimit && !isSelected;
-};
-
-const updateAnswer = (value: string, event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const isChecked = target.checked;
-  
-  if (isChecked) {
-    // Add to selected answers if not already present
-    if (!selectedAnswers.value.includes(value)) {
-      selectedAnswers.value.push(value);
+// Initialize local values from modelValue
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    if (typeof newValue === 'object' && newValue !== null) {
+      localValues.value = { ...newValue }
+    } else {
+      localValues.value = {}
     }
-  } else {
-    // Remove from selected answers
-    const index = selectedAnswers.value.indexOf(value);
-    if (index > -1) {
-      selectedAnswers.value.splice(index, 1);
+  },
+  { immediate: true, deep: true },
+)
+
+// Check if active question is within this multi-select range
+const isActiveRange = computed(() => {
+  const endNumber = props.startNumber + props.limit - 1
+  return props.activeQuestionNumber >= props.startNumber && props.activeQuestionNumber <= endNumber
+})
+
+// Set container ref - register for all question numbers in range
+const setContainerRef = (el: any) => {
+  if (el) {
+    containerRef.value = el as HTMLElement
+    // Register this element for all question numbers in the range
+    for (let i = 0; i < props.limit; i++) {
+      questionElements.value[props.startNumber + i] = el as HTMLElement
     }
   }
-  
-  emit('update:modelValue', [...selectedAnswers.value]);
-};
+}
 
-// Watch for changes in modelValue prop
-watch(() => props.modelValue, (newValue) => {
-  if (newValue && Array.isArray(newValue)) {
-    selectedAnswers.value = [...newValue];
+// Get current selected values as array
+const getCurrentValuesArray = (): string[] => {
+  return Object.values(localValues.value)
+}
+
+// Check if an option is selected
+const isSelected = (value: string) => {
+  const values = getCurrentValuesArray()
+  return values.includes(value)
+}
+
+// Count of selected options
+const selectedCount = computed(() => {
+  return Object.keys(localValues.value).length
+})
+
+// Handle checkbox change
+const handleCheckboxChange = (value: string) => {
+  const newValues = { ...localValues.value }
+
+  // Find if this value is already selected (find the question number key)
+  const existingKey = Object.keys(newValues).find((key) => newValues[Number(key)] === value)
+
+  if (existingKey) {
+    // Uncheck: remove from selection
+    delete newValues[Number(existingKey)]
+  } else {
+    // Check: add to selection if under limit
+    if (Object.keys(newValues).length < props.limit) {
+      // Find the next available question number in range
+      for (let i = 0; i < props.limit; i++) {
+        const questionNumber = props.startNumber + i
+        if (!newValues[questionNumber]) {
+          newValues[questionNumber] = value
+          break
+        }
+      }
+    } else {
+      // Already at limit, don't add
+      console.log('Limit reached, cannot add more')
+      return
+    }
   }
-}, { immediate: true });
+
+  console.log('Emitting new values:', newValues)
+  // Update local state immediately for reactivity
+  localValues.value = newValues
+  // Emit the updated value
+  emit('update:modelValue', newValues)
+}
+
+// Register refs on mount
+onMounted(() => {
+  emit('register-refs', questionElements.value)
+})
 </script>
-
-<style scoped>
-.multi-select-question {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-:deep(.instructions) {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-:deep(.instructions strong) {
-  font-weight: 600;
-}
-
-:deep(.instructions p) {
-  margin-bottom: 0.5rem;
-}
-</style>

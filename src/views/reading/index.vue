@@ -29,6 +29,7 @@ import {
 import SelectionQuestion from '@/components/reading/SelectionQuestion.vue'
 import CompletionQuestion from '@/components/reading/CompletionQuestion.vue'
 import MultipleChoiceQuestion from '@/components/reading/MultipleChoiceQuestion.vue'
+import MultiSelectQuestion from '@/components/reading/MultiSelectQuestion.vue'
 import DraggableSelectionQuestion from '@/components/reading/DraggableSelectionQuestion.vue'
 import { useExamAnswersStore } from '@/stores/examAnswers'
 import { useTimerStore } from '@/stores/timer'
@@ -50,12 +51,19 @@ const activeGlobalQuestion = ref(1) // Track the global question number (1-40)
 // Answers storage
 const answers = ref({})
 
+// Question refs for scrolling
+const questionRefs = ref({})
+
+// Register question refs from components
+const registerQuestionRefs = (refs) => {
+  questionRefs.value = { ...questionRefs.value, ...refs }
+}
+
 // Fetch reading test data
 onMounted(async () => {
   try {
     const response = await get('/student/reading')
     readingData.value = response.data
-
     // Load saved answers from store
     const savedAnswers = examAnswersStore.getReadingAnswers()
     answers.value = Object.keys(savedAnswers).length > 0 ? savedAnswers : {}
@@ -115,7 +123,25 @@ watch(
           for (const section of part.question.content) {
             const sectionAnswers = newAnswers[section.id] || []
 
-            if (Array.isArray(sectionAnswers)) {
+            // Handle multi-select answers (Record format)
+            if (
+              section.type === 'multi-select' &&
+              typeof sectionAnswers === 'object' &&
+              !Array.isArray(sectionAnswers)
+            ) {
+              Object.entries(sectionAnswers).forEach(([questionNum, answer]) => {
+                if (
+                  answer !== undefined &&
+                  answer !== null &&
+                  answer !== '' &&
+                  answer.toString().trim() !== ''
+                ) {
+                  partAnswers[questionNum.toString()] = answer
+                }
+              })
+            }
+            // Handle other question types (array format)
+            else if (Array.isArray(sectionAnswers)) {
               sectionAnswers.forEach((answer, index) => {
                 if (
                   answer !== undefined &&
@@ -210,11 +236,24 @@ const isQuestionAnswered = (globalQuestionNumber) => {
         globalQuestionNumber >= currentQuestionNum &&
         globalQuestionNumber < currentQuestionNum + sectionQuestionCount
       ) {
-        const localIndex = globalQuestionNumber - currentQuestionNum
         const sectionAnswers = answers.value[section.id]
 
-        if (!sectionAnswers || !Array.isArray(sectionAnswers)) return false
+        if (!sectionAnswers) return false
 
+        // Handle multi-select answers (Record<number, string> format)
+        if (section.type === 'multi-select') {
+          const answer = sectionAnswers[globalQuestionNumber]
+          return (
+            answer !== undefined &&
+            answer !== null &&
+            answer !== '' &&
+            answer.toString().trim() !== ''
+          )
+        }
+
+        // Handle other question types (array format)
+        if (!Array.isArray(sectionAnswers)) return false
+        const localIndex = globalQuestionNumber - currentQuestionNum
         const answer = sectionAnswers[localIndex]
         // Check if answer exists and is not empty
         return (
@@ -260,6 +299,9 @@ const getSectionQuestionCount = (section) => {
   } else if (section.type === 'multiple-choice') {
     // Count questions array
     return section.questions ? section.questions.length : 0
+  } else if (section.type === 'multi-select') {
+    // Multi-select questions count as their limit (number of questions they cover)
+    return section.limit || 2
   }
   return 0
 }
@@ -473,6 +515,20 @@ const highlightText = () => {
                         :starting-question-number="getSectionStartingQuestionNumber(index)"
                         :active-question-number="activeGlobalQuestion"
                         v-model="answers[section.id]"
+                        @question-click="setActiveQuestionByGlobalNumber"
+                      />
+
+                      <!-- Multi Select Questions -->
+                      <MultiSelectQuestion
+                        v-if="section.type === 'multi-select'"
+                        :title="section.title"
+                        :condition="section.condition"
+                        :options="section.options"
+                        :start-number="getSectionStartingQuestionNumber(index)"
+                        :limit="section.limit || 2"
+                        :active-question-number="activeGlobalQuestion"
+                        v-model="answers[section.id]"
+                        @register-refs="registerQuestionRefs"
                         @question-click="setActiveQuestionByGlobalNumber"
                       />
 
