@@ -191,12 +191,20 @@ onMounted(async () => {
 // Handle timer finished
 const handleTimerFinished = async () => {
   await submitAnswers()
+    // Stop the timer
+  timerStore.stop()
+  // Clear timer from localStorage
+  timerStore.clear()
   router.push('/') // Redirect to home or results page
 }
 
 // Cleanup on unmount
 onUnmounted(() => {
-  window.removeEventListener('timer-finished', handleTimerFinished)
+  window.removeEventListener('timer-finished', handleTimerFinished);
+  // Stop the timer
+  timerStore.stop()
+  // Clear timer from localStorage
+  timerStore.clear()
 })
 
 // Watch answers and save to store
